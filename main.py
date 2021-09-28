@@ -12,7 +12,7 @@ from engines import train, eval
 from parse_args import parse_args
 
 import vit_tk
-import resnet
+import resnet_cifar
 import resnet_cifar_tk
 
 
