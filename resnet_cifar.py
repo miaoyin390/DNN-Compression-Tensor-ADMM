@@ -119,4 +119,4 @@ def resnet20(pretrained=False, path=None, **kwargs):
 
 
 if __name__ == '__main__':
-    model = timm.create_model('resnet20')
+    model = timm.create_model('resnet32')

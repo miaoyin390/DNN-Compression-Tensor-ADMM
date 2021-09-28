@@ -123,7 +123,7 @@ def train(model, args):
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
 
-    linear_scaled_lr = args.lr * args.batch_size * utils.get_world_size() / 512.0
+    linear_scaled_lr = args.lr * args.batch_size * utils.get_world_size() / 256.0
     args.lr = linear_scaled_lr
     optimizer = create_optimizer(args, model_without_ddp)
     loss_scaler = NativeScaler()
@@ -205,7 +205,7 @@ def train(model, args):
         model.train()
         metric_logger = utils.MetricLogger(delimiter="  ")
         metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-        header = 'Epoch: [{}]'.format(epoch+1)
+        header = 'Epoch: [{}/{}]'.format(epoch+1, args.epochs)
 
         if args.admm:
             admm.update()
@@ -248,17 +248,16 @@ def train(model, args):
 
         lr_scheduler.step(epoch)
         if args.save_model:
-            checkpoint_paths = os.path.join(output_dir, file_name + '.pth')
-            for checkpoint_path in checkpoint_paths:
-                utils.save_on_master({
-                    'model': model_without_ddp.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'lr_scheduler': lr_scheduler.state_dict(),
-                    'epoch': epoch,
-                    'model_ema': get_state_dict(model_ema),
-                    'scaler': loss_scaler.state_dict(),
-                    'args': args,
-                }, checkpoint_path)
+            checkpoint_path = os.path.join(output_dir, file_name + '.pth')
+            utils.save_on_master({
+                'model': model_without_ddp.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict(),
+                'epoch': epoch,
+                'model_ema': get_state_dict(model_ema),
+                'scaler': loss_scaler.state_dict(),
+                'args': args,
+            }, checkpoint_path)
 
         test_stats = evaluate(data_loader_val, model, device)
         max_acc1 = max(max_acc1, test_stats["acc1"])

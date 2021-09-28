@@ -155,6 +155,11 @@ class TKConv2dR(Module):
                  dense_w: Tensor = None,
                  dense_b: Tensor = None,
                  ):
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+
         super().__init__()
 
         self.in_channels = in_channels
@@ -186,7 +191,7 @@ class TKConv2dR(Module):
         # implemented as two ops: padding + conv). `F.pad` accepts paddings in
         # reverse order than the dimension.
         self._reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
-        self.kernel_shape = torch.Tensor(out_channels, in_channels // groups, *kernel_size).shape
+        self.kernel_shape = [out_channels, in_channels // groups, *kernel_size]
 
         self.filter_dim = int(self.kernel_shape[2] * self.kernel_shape[3])
 

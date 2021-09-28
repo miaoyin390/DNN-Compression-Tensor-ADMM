@@ -25,7 +25,10 @@ class TTConv2dM(Module):
                  kernel_size, stride=1, padding=0, dilation=1, groups=1,
                  bias=True, padding_mode='zeros',
                  from_dense=False, dense_w=None, dense_b=None):
-
+        # kernel_size = _pair(kernel_size)
+        # stride = _pair(stride)
+        # padding = _pair(padding)
+        # dilation = _pair(dilation)
         super().__init__()
 
         self.tt_shapes = list(tt_shapes)
@@ -146,6 +149,10 @@ class TTConv2dR(Module):
                  dense_w: Tensor = None,
                  dense_b: Tensor = None,
                  ):
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
         super(TTConv2dR, self).__init__()
 
         self.tt_shapes = list(tt_shapes)
@@ -191,7 +198,7 @@ class TTConv2dR(Module):
         # implemented as two ops: padding + conv). `F.pad` accepts paddings in
         # reverse order than the dimension.
         self._reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
-        self.kernel_shape = torch.Tensor(out_channels, in_channels // groups, *kernel_size).shape
+        self.kernel_shape = [out_channels, in_channels // groups, *kernel_size]
 
         self.filter_dim = int(self.kernel_shape[2] * self.kernel_shape[3])
 

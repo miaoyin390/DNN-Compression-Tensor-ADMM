@@ -8,11 +8,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 import numpy as np
+import timm
 
 from timm.models.registry import register_model
 
 from TTConv import TTConv2dM, TTConv2dR
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
+
+import utils
 
 
 def _weights_init(m):
