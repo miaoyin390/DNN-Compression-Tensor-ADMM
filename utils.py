@@ -8,6 +8,7 @@ import os
 import time
 from collections import defaultdict, deque
 import datetime
+import math
 
 import torch
 import torch.distributed as dist
@@ -234,6 +235,25 @@ def init_distributed_mode(args):
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
+
+
+def normal_adjust_lr(optimizer, init_lr, epoch, epochs, base=0.2):
+    if (epoch + 1) > 0.95 * epochs:
+        factor = math.pow(base, 3) * 0.5
+    elif (epoch + 1) > 0.8 * epochs:
+        factor = math.pow(base, 3)
+    elif (epoch + 1) > 0.6 * epochs:
+        factor = math.pow(base, 2)
+    elif (epoch + 1) > 0.3 * epochs:
+        factor = base
+    else:
+        factor = 1
+
+    lr = init_lr * factor
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+    return lr
 
 
 def get_hp_dict(model_name, ratio, format='none'):

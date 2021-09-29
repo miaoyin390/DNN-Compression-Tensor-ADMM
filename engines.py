@@ -23,10 +23,11 @@ from timm.scheduler import create_scheduler
 from timm.optim import create_optimizer
 from timm.utils import NativeScaler, get_state_dict, ModelEma, accuracy
 
-from datasets import get_train_loader, get_val_loader
+from datasets import get_train_loader, get_val_loader, get_data_loader
 from losses import DistillationLoss
 import utils
 from utils import get_hp_dict
+from utils import normal_adjust_lr
 from admm import ADMM
 
 
@@ -90,8 +91,12 @@ def train(model, args):
 
     cudnn.benchmark = True
 
-    data_loader_train = get_train_loader(args)
-    data_loader_val = get_val_loader(args)
+    if args.deit_loader:
+        data_loader_train = get_train_loader(args)
+        data_loader_val = get_val_loader(args)
+    else:
+        data_loader_train = get_data_loader(True, args)
+        data_loader_val = get_data_loader(False, args)
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
@@ -123,10 +128,12 @@ def train(model, args):
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
 
-    linear_scaled_lr = args.lr * args.batch_size * utils.get_world_size() / 256.0
+    linear_scaled_lr = args.lr * utils.get_world_size()
     args.lr = linear_scaled_lr
     optimizer = create_optimizer(args, model_without_ddp)
-    loss_scaler = NativeScaler()
+    # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+    # loss_scaler = NativeScaler()
+    loss_scaler = torch.cuda.amp.GradScaler()
 
     lr_scheduler, _ = create_scheduler(args, optimizer)
 
@@ -199,6 +206,7 @@ def train(model, args):
     max_acc5 = 0.
     for epoch in range(args.start_epoch, args.epochs):
         start_time = time.time()
+        lr_scheduler.step(epoch)
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
 
@@ -206,17 +214,22 @@ def train(model, args):
         metric_logger = utils.MetricLogger(delimiter="  ")
         metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
         header = 'Epoch: [{}/{}]'.format(epoch+1, args.epochs)
-
         if args.admm:
             admm.update()
         for samples, targets in metric_logger.log_every(data_loader_train, args.print_freq, header):
-            samples = samples.to(device, non_blocking=True)
-            targets = targets.to(device, non_blocking=True)
+            samples = samples.to(device)
+            targets = targets.to(device)
 
             if mixup_fn is not None:
                 samples, targets = mixup_fn(samples, targets)
 
-            with torch.cuda.amp.autocast():
+            if args.fp16:
+                with torch.cuda.amp.autocast():
+                    outputs = model(samples)
+                    loss = criterion(samples, outputs, targets)
+                    if args.admm:
+                        loss = admm.append_admm_loss(args.rho, loss)
+            else:
                 outputs = model(samples)
                 loss = criterion(samples, outputs, targets)
                 if args.admm:
@@ -230,10 +243,19 @@ def train(model, args):
 
             optimizer.zero_grad()
 
-            # this attribute is added by timm on one optimizer (adahessian)
-            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-            loss_scaler(loss, optimizer, clip_grad=args.clip_grad,
-                        parameters=model.parameters(), create_graph=is_second_order)
+            if args.fp16:
+                # this attribute is added by timm on one optimizer (adahessian)
+
+                # is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+                # loss_scaler(loss, optimizer, clip_grad=args.clip_grad,
+                #             parameters=model.parameters(), create_graph=is_second_order)
+
+                loss_scaler.scale(loss).backward()
+                loss_scaler.step(optimizer)
+                loss_scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
 
             torch.cuda.synchronize()
             if model_ema is not None:
@@ -246,7 +268,6 @@ def train(model, args):
         print("Averaged stats:", metric_logger)
         train_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
-        lr_scheduler.step(epoch)
         if args.save_model:
             checkpoint_path = os.path.join(output_dir, file_name + '.pth')
             utils.save_on_master({
