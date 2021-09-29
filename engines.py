@@ -269,16 +269,20 @@ def train(model, args):
         train_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
         if args.save_model:
-            checkpoint_path = os.path.join(output_dir, file_name + '.pth')
-            utils.save_on_master({
-                'model': model_without_ddp.state_dict(),
+            checkpoint_path = os.path.join(output_dir, file_name + '_checkpoint.pth')
+            checkpoint = {
                 'optimizer': optimizer.state_dict(),
                 'lr_scheduler': lr_scheduler.state_dict(),
                 'epoch': epoch,
-                'model_ema': get_state_dict(model_ema),
                 'scaler': loss_scaler.state_dict(),
                 'args': args,
-            }, checkpoint_path)
+            }
+            if model_ema is not None:
+                checkpoint['model_ema'] = get_state_dict(model_ema)
+            utils.save_on_master(checkpoint, checkpoint_path)
+            model_state_dict = model_without_ddp.state_dict()
+            model_path = os.path.join(output_dir, file_name + '_model.pt')
+            utils.save_on_master(model_state_dict, model_path)
 
         test_stats = evaluate(data_loader_val, model, device)
         max_acc1 = max(max_acc1, test_stats["acc1"])

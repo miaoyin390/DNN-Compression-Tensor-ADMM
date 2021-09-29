@@ -14,6 +14,8 @@ from parse_args import parse_args
 import vit_tk
 import resnet_cifar
 import resnet_cifar_tk
+import resnet_inet_tk
+import resnet_inet_tt
 
 
 def main(args):
