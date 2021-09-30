@@ -130,7 +130,7 @@ class TKConv2dM(Module):
         out = self.core_conv(out)
         _, _, height_, width_ = out.shape
 
-        out = self.last_factor.mm(out.permuete(1, 0, 2, 3).reshape(self.out_rank, -1))
+        out = self.last_factor.mm(out.permute(1, 0, 2, 3).reshape(self.out_rank, -1))
         out = out.reshape(self.out_channels, batch_size, height_, width_).permute(1, 0, 2, 3)
 
         if self.bias is not None:
