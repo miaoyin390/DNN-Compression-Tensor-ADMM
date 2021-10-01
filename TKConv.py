@@ -106,8 +106,8 @@ class TKConv2dM(Module):
             self.register_parameter('bias', None)
 
         if from_dense:
-            core_tensor, (last_factor, first_factor) = partial_tucker(dense_w, modes=[0, 1],
-                                                                      rank=[out_rank, in_rank], init='svd')
+            core_tensor, (last_factor, first_factor) = partial_tucker(dense_w, modes=(0, 1),
+                                                                      rank=(out_rank, in_rank), init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
             self.core_conv.weight.data = core_tensor
@@ -205,11 +205,11 @@ class TKConv2dR(Module):
             self.register_parameter('bias', None)
 
         if from_dense:
-            core_tensor, (last_factor, first_factor) = partial_tucker(dense_w, modes=[0, 1],
-                                                                      rank=[out_rank, in_rank], init='svd')
+            core_tensor, (last_factor, first_factor) = partial_tucker(dense_w, modes=(0, 1),
+                                                                      rank=(out_rank, in_rank), init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
-            self.core_tensor = core_tensor
+            self.core_tensor.data = core_tensor
 
             if bias:
                 self.bias.data = dense_b

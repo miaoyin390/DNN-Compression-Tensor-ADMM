@@ -77,21 +77,23 @@ class ADMM:
 
     def prune_conv_rank_tt(self, z, name):
         kernel_shape = z.shape
-        # filter_dim = kernel_shape[2] * kernel_shape[3]
+        filter_dim = kernel_shape[2] * kernel_shape[3]
         tt_ranks = self.hp_dict.ranks[name]
         tt_shapes = self.hp_dict.tt_shapes[name]
-        t = np.transpose(np.reshape(z, [kernel_shape[0], kernel_shape[1], -1]), [0, 2, 1])
+        t = np.transpose(np.reshape(z, (kernel_shape[0], kernel_shape[1], filter_dim)), (0, 2, 1))
         tt_cores = ten2tt(t, tt_shapes, tt_ranks)
-        updated_z = tt2ten(tt_cores, tt_shapes)
+        updated_z = tt2ten(tt_cores, (kernel_shape[0], filter_dim, kernel_shape[1]))
+        updated_z = np.reshape(np.transpose(updated_z, (0, 2, 1)), kernel_shape)
 
         return updated_z
 
     def prune_linear_rank_tt(self, z, name):
+        weight_shape = z.shape
         tt_ranks = self.hp_dict.ranks[name]
         tt_shapes = self.hp_dict.tt_shapes[name]
         t = np.reshape(z, tt_shapes)
         tt_cores = ten2tt(t, tt_shapes, tt_ranks)
-        updated_z = tt2ten(tt_cores, tt_shapes)
+        updated_z = tt2ten(tt_cores, weight_shape)
 
         return updated_z
 

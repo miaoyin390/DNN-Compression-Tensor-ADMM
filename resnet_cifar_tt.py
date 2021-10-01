@@ -163,3 +163,41 @@ def ttr_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
+
+
+@register_model
+def ttm_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([5, 5, 5], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def ttm_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([3, 3, 3], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+if __name__ == '__main__':
+    model_name = 'ttr_resnet32'
+    hp_dict = utils.get_hp_dict(model_name, '3')
+    model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
+    n_params = 0
+    for name, p in model.named_parameters():
+        if 'conv' in name or 'linear' in name:
+            print(name, p.shape)
+            n_params += int(np.prod(p.shape))
+    print('Total # parameters: {}'.format(n_params))

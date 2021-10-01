@@ -21,7 +21,7 @@ import resnet_inet_tt
 def main(args):
     print(f"Creating model: {args.model}")
 
-    if args.admm and args.decompose:
+    if args.admm and (args.decompose or 'tt' in args.model or 'tk' in args.model):
         raise Exception('ERROR: ADMM mode does not support decomposed model!')
 
     if args.dataset == 'cifar10':

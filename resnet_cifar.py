@@ -123,6 +123,6 @@ if __name__ == '__main__':
     n_params = 0
     for name, p in model.named_parameters():
         if 'conv' in name or 'linear' in name:
-            print(name, p.shape)
-            n_params += int(np.prod(p.shape))
+            print(name, np.array(p.shape))
+            n_params += int(np.prod(np.array(p.shape)))
     print('Total # parameters: {}'.format(n_params))

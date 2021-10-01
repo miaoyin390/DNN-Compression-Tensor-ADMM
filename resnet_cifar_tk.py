@@ -145,6 +145,12 @@ def tkr_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     model = _tk_resnet([5, 5, 5], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
+        # test influence of Gaussian noise
+        # for key in state_dict.keys():
+        #     if 'conv' in key:
+        #         shape = state_dict[key].shape
+        #         watt = torch.mean(state_dict[key] ** 2)
+        #         state_dict[key].add_(torch.from_numpy(np.random.normal(0, np.sqrt(0.01*watt), shape)))
         model.load_state_dict(state_dict)
     return model
 
@@ -182,6 +188,32 @@ def tkm_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     else:
         dense_dict = None
     model = _tk_resnet([3, 3, 3], conv=TKConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tk_resnet([5, 5, 5], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tk_resnet([3, 3, 3], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)

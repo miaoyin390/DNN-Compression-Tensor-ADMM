@@ -203,7 +203,7 @@ class TTConv2dR(Module):
         self.filter_dim = int(self.kernel_shape[2] * self.kernel_shape[3])
 
         self.out_tt_cores = ParameterList([Parameter(torch.Tensor(
-            self.out_tt_ranks[i], self.out_tt_shape[i], self.out_tt_ranks[i+1]))
+            self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i+1]))
             for i in range(self.out_tt_order)])
 
         self.conv_core = Parameter(torch.Tensor(self.out_tt_ranks[-1], self.filter_dim, self.in_tt_ranks[0]))

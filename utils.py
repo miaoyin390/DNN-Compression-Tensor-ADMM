@@ -268,9 +268,14 @@ def get_hp_dict(model_name, ratio, format='none'):
             from hp_dicts.tk_deit_tiny_patch16_224 import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    if 'tk' in format and 'resnet32' in model_name:
+    elif 'tk' in format and 'resnet32' in model_name:
         if ratio == '3':
             from hp_dicts.tk_resnet32 import HyperParamsDictRatio3x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
+    elif 'tt' in format and 'resnet32' in model_name:
+        if ratio == '3':
+            from hp_dicts.tt_resnet32 import HyperParamsDictRatio3x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
     else:
