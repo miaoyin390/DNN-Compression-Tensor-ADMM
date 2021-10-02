@@ -91,7 +91,7 @@ def train(model, args):
 
     cudnn.benchmark = True
 
-    if args.deit_loader:
+    if args.timm_loader:
         data_loader_train = get_train_loader(args)
         data_loader_val = get_val_loader(args)
     else:

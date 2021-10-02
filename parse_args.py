@@ -132,7 +132,7 @@ def parse_args():
     parser.add_argument('--num-workers', default=10, type=int)
     parser.add_argument('--pin-memory', action='store_true', default=True,
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
-    parser.add_argument('--no-pin-mem', action='store_true', dest='pin_memory', default=False,
+    parser.add_argument('--no-pin-mem', action='store_false', dest='pin_memory', default=False,
                         help='')
     parser.set_defaults(pin_mem=True)
 
@@ -157,8 +157,10 @@ def parse_args():
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--log', action='store_true', default=False)
     parser.add_argument('--fp16', action='store_true', default=False)
-    parser.add_argument('--deit-loader', action='store_true', default=False)
-
+    parser.add_argument('--timm-loader', action='store_true', default=False)
+    parser.add_argument('--no-timm-loader', action='store_false', dest='timm_loader', default=False,
+                        help='')
+    parser.set_defaults(timm_loader=True)
 
     args = parser.parse_args()
 

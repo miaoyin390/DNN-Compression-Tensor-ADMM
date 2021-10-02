@@ -171,7 +171,7 @@ def ttm_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
         dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
-    model = _tt_resnet([5, 5, 5], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    model = _tt_resnet([5, 5, 5], conv=TTConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
@@ -184,7 +184,7 @@ def ttm_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
         dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
-    model = _tt_resnet([3, 3, 3], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    model = _tt_resnet([3, 3, 3], conv=TTConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)

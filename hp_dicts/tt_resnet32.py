@@ -56,7 +56,7 @@ class HyperParamsDictRatio3x:
              'layer2.3.conv2.weight': [1, 8, 16, 16, 8, 1],
              'layer2.4.conv1.weight': [1, 8, 16, 16, 8, 1],
              'layer2.4.conv2.weight': [1, 8, 16, 16, 8, 1],
-             'layer3.0.conv1.weight': [1, 8, 32, 24, 8, 1],
+             'layer3.0.conv1.weight': [1, 8, 40, 24, 8, 1],
              'layer3.0.conv2.weight': [1, 8, 27, 27, 8, 1],
              'layer3.1.conv1.weight': [1, 8, 27, 27, 8, 1],
              'layer3.1.conv2.weight': [1, 8, 27, 27, 8, 1],

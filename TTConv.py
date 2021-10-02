@@ -63,7 +63,7 @@ class TTConv2dM(Module):
                                          groups=groups, bias=False, padding_mode=padding_mode)
 
         self.out_tt_cores = ParameterList([Parameter(torch.Tensor(
-            self.out_tt_ranks[i], self.out_tt_shape[i], self.out_tt_ranks[i+1]))
+            self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i+1]))
             for i in range(self.out_tt_order)])
 
         if bias:
@@ -73,6 +73,7 @@ class TTConv2dM(Module):
 
         if from_dense:
             w = dense_w.detach().cpu().numpy()
+            kernel_shape = w.shape
             w = np.reshape(w, [self.out_channels, self.in_channels, -1])
             tt_shapes = self.out_tt_shapes + [w.shape[-1]] + self.in_tt_shapes
             tt_cores = ten2tt(w, tt_shapes, self.tt_ranks)
@@ -82,7 +83,7 @@ class TTConv2dM(Module):
                     self.out_tt_cores[i].data = torch.from_numpy(tt_cores[i])
                 elif i == self.out_tt_order:
                     self.core_conv.weight.data = torch.from_numpy(tt_cores[i]).permute(0, 2, 1).reshape(
-                        self.out_tt_ranks[-1], self.in_tt_ranks[0], w.shape[2], w.shape[3])
+                        self.out_tt_ranks[-1], self.in_tt_ranks[0], kernel_shape[2], kernel_shape[3])
                 else:
                     self.in_tt_cores[i-self.out_tt_order-1].data = torch.from_numpy(tt_cores[i])
 
@@ -227,7 +228,7 @@ class TTConv2dR(Module):
                 if i < self.out_tt_order:
                     self.out_tt_cores[i].data = torch.from_numpy(tt_cores[i])
                 elif i == self.out_tt_order:
-                    self.core_conv.weight.data = torch.from_numpy(tt_cores[i])
+                    self.conv_core.data = torch.from_numpy(tt_cores[i])
                 else:
                     self.in_tt_cores[i-self.out_tt_order-1].data = torch.from_numpy(tt_cores[i])
 
