@@ -132,8 +132,8 @@ def train(model, args):
     args.lr = linear_scaled_lr
     optimizer = create_optimizer(args, model_without_ddp)
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
-    # loss_scaler = NativeScaler()
-    loss_scaler = torch.cuda.amp.GradScaler()
+    loss_scaler = NativeScaler()
+    # loss_scaler = torch.cuda.amp.GradScaler()
 
     lr_scheduler, _ = create_scheduler(args, optimizer)
 
@@ -246,13 +246,13 @@ def train(model, args):
             if args.fp16:
                 # this attribute is added by timm on one optimizer (adahessian)
 
-                # is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-                # loss_scaler(loss, optimizer, clip_grad=args.clip_grad,
-                #             parameters=model.parameters(), create_graph=is_second_order)
+                is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+                loss_scaler(loss, optimizer, clip_grad=args.clip_grad,
+                            parameters=model.parameters(), create_graph=is_second_order)
 
-                loss_scaler.scale(loss).backward()
-                loss_scaler.step(optimizer)
-                loss_scaler.update()
+                # loss_scaler.scale(loss).backward()
+                # loss_scaler.step(optimizer)
+                # loss_scaler.update()
             else:
                 loss.backward()
                 optimizer.step()
