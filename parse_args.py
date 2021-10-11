@@ -118,7 +118,7 @@ def parse_args():
 
     # Dataset parameters
 
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet'],
+    parser.add_argument('--dataset', default='imagenet', choices=['cifar10', 'cifar100', 'imagenet'],
                         type=str, help='Image Net dataset path')
     parser.add_argument('--output-dir', default='./saved_models',
                         help='path where to save, empty for no saving')

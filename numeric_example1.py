@@ -52,9 +52,3 @@ y = h.reshape([out_channels, batch_size, height_, width_]).permute([1, 0, 2, 3])
 print(y.shape)
 
 
-
-
-
-
-
-

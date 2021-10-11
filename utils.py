@@ -278,6 +278,11 @@ def get_hp_dict(model_name, ratio, format='none'):
             from hp_dicts.tt_resnet32 import HyperParamsDictRatio3x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
+    elif 'tk' in format and 'resnet18' in model_name:
+        if ratio == '2':
+            from hp_dicts.tk_resnet18 import HyperParamsDictRatio2x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
     else:
         hp_dict = None
 
