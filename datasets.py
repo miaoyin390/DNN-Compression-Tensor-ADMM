@@ -31,7 +31,7 @@ def build_dataset(is_train, args):
         elif os.path.exists('dgx.work'):
             data_path = '/raid/data/ilsvrc2012/'
         else:
-            data_path = '/home/datasets/imagenet/'
+            data_path = '~/datasets/imagenet/'
         root = os.path.join(data_path, 'train' if is_train else 'val')
         dataset = datasets.ImageFolder(root, transform=transform)
     else:
