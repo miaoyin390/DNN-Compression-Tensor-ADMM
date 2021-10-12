@@ -27,11 +27,11 @@ def build_dataset(is_train, args):
         dataset = datasets.CIFAR100('~/datasets/cifar100', train=is_train, transform=transform)
     elif args.dataset == 'imagenet':
         if os.path.exists('2080.work'):
-            data_path = '/home/miao/datasets/imagenet/'
+            data_path = '~/datasets/imagenet/'
         elif os.path.exists('dgx.work'):
             data_path = '/raid/data/ilsvrc2012/'
         else:
-            data_path = '~/datasets/imagenet/'
+            data_path = '/home/datasets/imagenet/'
         root = os.path.join(data_path, 'train' if is_train else 'val')
         dataset = datasets.ImageFolder(root, transform=transform)
     else:
