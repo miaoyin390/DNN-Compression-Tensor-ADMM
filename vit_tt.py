@@ -143,7 +143,12 @@ def _tt_vit(patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qk
 @register_model
 def ttm_deit_tiny_patch16_224(hp_dict, pretrained=False, decompose=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if path is None:
+            dense_dict = timm.create_model('deit_tiny_patch16_224', pretrained=True).state_dict()
+        elif path.startwith('http'):
+            dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_vit(patch_size=16, embed_dim=192, depth=12, num_heads=3, mlp_ratio=4, qkv_bias=True,
@@ -158,7 +163,12 @@ def ttm_deit_tiny_patch16_224(hp_dict, pretrained=False, decompose=False, path=N
 @register_model
 def ttr_deit_tiny_patch16_224(hp_dict, pretrained=False, decompose=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if path is None:
+            dense_dict = timm.create_model('deit_tiny_patch16_224', pretrained=True).state_dict()
+        elif path.startwith('http'):
+            dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_vit(patch_size=16, embed_dim=192, depth=12, num_heads=3, mlp_ratio=4, qkv_bias=True,
@@ -173,7 +183,12 @@ def ttr_deit_tiny_patch16_224(hp_dict, pretrained=False, decompose=False, path=N
 @register_model
 def ttm_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if path is None:
+            dense_dict = timm.create_model('deit_small_patch16_224', pretrained=True).state_dict()
+        elif path.startwith('http'):
+            dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_vit(patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
@@ -188,7 +203,12 @@ def ttm_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=
 @register_model
 def ttr_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if path is None:
+            dense_dict = timm.create_model('deit_small_patch16_224', pretrained=True).state_dict()
+        elif path.startwith('http'):
+            dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_vit(patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
@@ -201,10 +221,23 @@ def ttr_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=
 
 
 if __name__ == '__main__':
-    model_name = 'deit_tiny_patch16_224'
+    baseline = 'deit_tiny_patch16_224'
+    model_name = 'ttr_' + baseline
     hp_dict = utils.get_hp_dict(model_name, '2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
+    tk_params = 0
     for name, p in model.named_parameters():
         if p.requires_grad:
             print(name, p.shape)
+            tk_params += int(np.prod(p.shape))
+    print('Compressed # parameters: {}'.format(tk_params))
+
+    base_params = 0
+    model = timm.create_model(baseline)
+    for name, p in model.named_parameters():
+        if p.requires_grad:
+            # print(name, p.shape)
+            base_params += int(np.prod(p.shape))
+    print('Baseline # parameters: {}'.format(base_params))
+    print('Compression ratio: {}'.format(base_params/tk_params))
 

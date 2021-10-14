@@ -46,7 +46,7 @@ class TKLinearM(Module):
                                                                       rank=[out_rank, in_rank], init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
-            self.core_tensor = core_tensor
+            self.core_tensor.data = core_tensor
 
             if bias:
                 self.bias.data = dense_b
@@ -97,7 +97,7 @@ class TKLinearR(Module):
                                                                       rank=[out_rank, in_rank], init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
-            self.core_tensor = core_tensor
+            self.core_tensor.data = core_tensor
 
             if bias:
                 self.bias.data = dense_b

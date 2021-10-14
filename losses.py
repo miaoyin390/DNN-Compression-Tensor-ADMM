@@ -27,7 +27,9 @@ class DistillationLoss(torch.nn.Module):
             labels: the labels for the base criterion
         """
         outputs_kd = None
-        if not isinstance(outputs, torch.Tensor):
+        if isinstance(outputs, torch.Tensor):
+            outputs_kd = outputs
+        elif isinstance(outputs, tuple):
             # assume that the model outputs a tuple of [outputs, outputs_kd]
             outputs, outputs_kd = outputs
         base_loss = self.base_criterion(outputs, labels)

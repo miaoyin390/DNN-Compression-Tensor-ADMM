@@ -147,20 +147,20 @@ def train(model, args):
 
     teacher_model = None
     if args.distillation_type != 'none':
-        assert args.teacher_path, 'need to specify teacher-path when using distillation'
+        # assert args.teacher_path, 'need to specify teacher-path when using distillation'
         print(f"Creating teacher model: {args.teacher_model}")
         teacher_model = create_model(
             args.teacher_model,
             pretrained=True,
             num_classes=args.num_classes,
-            global_pool='avg',
+            # global_pool='avg',
         )
-        if args.teacher_path.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                args.teacher_path, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(args.teacher_path, map_location='cpu')
-        teacher_model.load_state_dict(checkpoint['model'])
+        # if args.teacher_path.startswith('https'):
+        #     checkpoint = torch.hub.load_state_dict_from_url(
+        #         args.teacher_path, map_location='cpu', check_hash=True)
+        # else:
+        #     checkpoint = torch.load(args.teacher_path, map_location='cpu')
+        # teacher_model.load_state_dict(checkpoint['model'])
         teacher_model.to(device)
         teacher_model.eval()
 

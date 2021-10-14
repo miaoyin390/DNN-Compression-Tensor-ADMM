@@ -44,7 +44,7 @@ class TTLinearM(Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.tt_ranks = tt_ranks
+        self.tt_ranks = list(tt_ranks)
 
         self.tt_cores = ParameterList([Parameter(torch.Tensor(
             self.tt_ranks[i], self.tt_shapes[i], self.tt_ranks[i+1])) for i in range(self.tt_order)])
@@ -116,7 +116,7 @@ class TTLinearR(Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.tt_ranks = tt_ranks
+        self.tt_ranks = list(tt_ranks)
 
         self.tt_cores = ParameterList([Parameter(torch.Tensor(
             self.tt_ranks[i], self.tt_shapes[i], self.tt_ranks[i+1])) for i in range(self.tt_order)])

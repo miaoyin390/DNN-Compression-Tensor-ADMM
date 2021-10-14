@@ -89,7 +89,7 @@ class ADMM:
 
     def prune_linear_rank_tt(self, z, name):
         weight_shape = z.shape
-        tt_ranks = self.hp_dict.ranks[name]
+        tt_ranks = list(self.hp_dict.ranks[name])
         tt_shapes = self.hp_dict.tt_shapes[name]
         t = np.reshape(z, tt_shapes)
         tt_cores = ten2tt(t, tt_shapes, tt_ranks)
