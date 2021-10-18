@@ -194,7 +194,7 @@ def train(model, args):
 
     # ADMM initialization
     if args.admm:
-        admm = ADMM(model_without_ddp, get_hp_dict(args.model, args.ratio, args.format), args.format,
+        admm = ADMM(model_without_ddp, get_hp_dict(args.model, args.ratio, args.format, args.tt_type), args.format,
                     device, verbose=args.verbose, log=args.log)
         file_name = '{}_{}_admm_{}_{}'.format(args.model, args.dataset, args.format, timestamp)
         admm.update(update_u=False)

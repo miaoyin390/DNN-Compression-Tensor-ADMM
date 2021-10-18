@@ -3,6 +3,7 @@
 # Author: MIAO YIN
 # Time: 2021/9/27 20:52
 
+import numpy as np
 import torch
 import pickle
 from torch import Tensor
@@ -79,7 +80,7 @@ class TTBasicBlock(nn.Module):
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv1'
         w_name = layer + '.weight'
-        if w_name in hp_dict.weight_names_set:
+        if w_name in hp_dict.ranks.keys():
             if dense_dict is None:
                 self.conv1 = conv3x3_tt(inplanes, planes, hp_dict.tt_shapes[w_name],
                                         hp_dict.ranks[w_name], stride, conv=conv)
@@ -93,7 +94,7 @@ class TTBasicBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv2'
         w_name = layer + '.weight'
-        if w_name in hp_dict.weight_names_set:
+        if w_name in hp_dict.ranks.keys():
             if dense_dict is None:
                 self.conv2 = conv3x3_tt(planes, planes, hp_dict.tt_shapes[w_name],
                                         hp_dict.ranks[w_name], conv=conv)
@@ -158,7 +159,7 @@ class TTBottleneck(nn.Module):
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv1'
         w_name = layer + '.weight'
-        if w_name in hp_dict.weight_names_set:
+        if w_name in hp_dict.ranks.keys():
             if dense_dict is None:
                 self.conv1 = conv1x1_tt(inplanes, width, hp_dict.tt_shapes[w_name],
                                         hp_dict.ranks[w_name], conv=conv)
@@ -171,7 +172,7 @@ class TTBottleneck(nn.Module):
         self.bn1 = norm_layer(width)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv2'
         w_name = layer + '.weight'
-        if w_name in hp_dict.weight_names_set:
+        if w_name in hp_dict.ranks.keys():
             if dense_dict is None:
                 self.conv2 = conv3x3_tt(width, width, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
                                         stride, groups, dilation, conv=conv)
@@ -184,7 +185,7 @@ class TTBottleneck(nn.Module):
         self.bn2 = norm_layer(width)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv3'
         w_name = layer + '.weight'
-        if w_name in hp_dict.weight_names_set:
+        if w_name in hp_dict.ranks.keys():
             if dense_dict is None:
                 self.conv3 = conv1x1_tt(width, planes * self.expansion, hp_dict.tt_shapes[w_name],
                                         hp_dict.ranks[w_name], conv=conv)
@@ -392,3 +393,25 @@ def ttr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
+
+
+if __name__ == '__main__':
+    baseline = 'resnet18'
+    model_name = 'ttr_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, '2', tt_type='special')
+    model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
+    tk_params = 0
+    for name, p in model.named_parameters():
+        if 'conv' in name or 'fc' in name:
+            print(name, p.shape)
+            tk_params += int(np.prod(p.shape))
+    print('Compressed # parameters: {}'.format(tk_params))
+
+    base_params = 0
+    model = timm.create_model(baseline)
+    for name, p in model.named_parameters():
+        if 'conv' in name or 'fc' in name:
+            # print(name, p.shape)
+            base_params += int(np.prod(p.shape))
+    print('Baseline # parameters: {}'.format(base_params))
+    print('Compression ratio: {}'.format(base_params/tk_params))

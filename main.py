@@ -35,7 +35,7 @@ def main(args):
     elif args.dataset == 'imagenet':
         args.num_classes = 1000
 
-    hp_dict = utils.get_hp_dict(args.model, args.ratio)
+    hp_dict = utils.get_hp_dict(args.model, args.ratio, tt_type=args.tt_type)
 
     if 'deit' in args.model:
         model_dict = dict(drop_rate=args.drop,

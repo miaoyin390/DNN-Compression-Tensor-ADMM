@@ -256,7 +256,7 @@ def normal_adjust_lr(optimizer, init_lr, epoch, epochs, base=0.2):
     return lr
 
 
-def get_hp_dict(model_name, ratio, format='none'):
+def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
     if 'tk' in model_name:
         format = 'tk'
     elif 'tt' in model_name:
@@ -286,6 +286,13 @@ def get_hp_dict(model_name, ratio, format='none'):
     elif 'tk' in format and 'resnet18' in model_name:
         if ratio == '2':
             from hp_dicts.tk_resnet18 import HyperParamsDictRatio2x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
+    elif 'tt' in format and 'resnet18' in model_name:
+        if ratio == '2' and tt_type == 'general':
+            from hp_dicts.tt_resnet18 import HyperParamsDictGeneralRatio2x as hp_dict
+        elif ratio == '2' and tt_type == 'special':
+            from hp_dicts.tt_resnet18 import HyperParamsDictSpecialRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
     elif 'tk' in format and 'resnet50' in model_name:
