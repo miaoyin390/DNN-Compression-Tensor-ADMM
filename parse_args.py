@@ -145,7 +145,7 @@ def parse_args():
     parser.add_argument('--num-classes', default=10, type=int, metavar='N', help='Number of classes')
     parser.add_argument('--print-freq', default=100, type=int, metavar='N', help='print frequency')
     parser.add_argument('--admm', action='store_true', default=False, help='Enabling ADMM training mode')
-    parser.add_argument('--save-log', action='store_true', default=True, help='Enabling saving log file')
+    parser.add_argument('--save-log', action='store_true', default=False, help='Enabling saving log file')
     parser.add_argument('--save-model', action='store_true', default=False, help='Enabling saving model')
     parser.add_argument('--model-path', type=str, default=None, help='Initialized model path')
     parser.add_argument('--pretrained', action='store_true', default=False,

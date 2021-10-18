@@ -197,6 +197,7 @@ def train(model, args):
         admm = ADMM(model_without_ddp, get_hp_dict(args.model, args.ratio, args.format), args.format,
                     device, verbose=args.verbose, log=args.log)
         file_name = '{}_{}_admm_{}_{}'.format(args.model, args.dataset, args.format, timestamp)
+        admm.update(update_u=False)
     else:
         admm = None
         file_name = '{}_{}_{}'.format(args.model, args.dataset, timestamp)
@@ -214,9 +215,11 @@ def train(model, args):
         metric_logger = utils.MetricLogger(delimiter="  ")
         metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
         header = 'Epoch: [{}/{}]'.format(epoch+1, args.epochs)
+
         if args.admm:
             admm.update()
-        for samples, targets in metric_logger.log_every(data_loader_train, args.print_freq, header):
+
+        for step, (samples, targets) in enumerate(metric_logger.log_every(data_loader_train, args.print_freq, header)):
             samples = samples.to(device)
             targets = targets.to(device)
 
