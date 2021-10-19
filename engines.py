@@ -280,7 +280,7 @@ def train(model, args):
                 'scaler': loss_scaler.state_dict(),
                 'args': args,
             }
-            if model_ema is not None:
+            if model_ema:
                 checkpoint['model_ema'] = get_state_dict(model_ema)
             utils.save_on_master(checkpoint, checkpoint_path)
             model_state_dict = model_without_ddp.state_dict()
