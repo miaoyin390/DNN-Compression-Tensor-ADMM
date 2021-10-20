@@ -131,7 +131,6 @@ def train(model, args):
     linear_scaled_lr = args.lr * utils.get_world_size()
     args.lr = linear_scaled_lr
     optimizer = create_optimizer(args, model_without_ddp)
-    # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
     # loss_scaler = NativeScaler()
     loss_scaler = torch.cuda.amp.GradScaler()
 
@@ -224,6 +223,9 @@ def train(model, args):
             targets = targets.to(device)
 
             if mixup_fn is not None:
+                if len(samples) % 2 != 0:
+                    samples = samples[:-1]
+                    targets = targets[:-1]
                 samples, targets = mixup_fn(samples, targets)
 
             if args.fp16:
@@ -280,7 +282,7 @@ def train(model, args):
                 'scaler': loss_scaler.state_dict(),
                 'args': args,
             }
-            if model_ema:
+            if model_ema is not None:
                 checkpoint['model_ema'] = get_state_dict(model_ema)
             utils.save_on_master(checkpoint, checkpoint_path)
             model_state_dict = model_without_ddp.state_dict()
