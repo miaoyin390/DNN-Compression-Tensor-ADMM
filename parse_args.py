@@ -159,9 +159,9 @@ def parse_args():
     parser.add_argument('--log', action='store_true', default=False)
     parser.add_argument('--fp16', action='store_true', default=False)
     parser.add_argument('--timm-loader', action='store_true', default=False)
-    parser.add_argument('--no-timm-loader', action='store_false', dest='timm_loader', default=False,
-                        help='')
-    parser.set_defaults(timm_loader=True)
+    # parser.add_argument('--no-timm-loader', action='store_false', dest='timm_loader', default=False,
+    #                     help='')
+    # parser.set_defaults(timm_loader=True)
 
     args = parser.parse_args()
 
