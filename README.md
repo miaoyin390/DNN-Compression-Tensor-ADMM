@@ -7,7 +7,7 @@
 
 #### > Experimental results:
 
-| Model                     | Top-1 (%) | Top-5 (%) | Ratio |                                                  Config                                                  |
+| Model                     | Top-1 (%) | Top-5 (%) | Ratio |                                                  Configuration                                           |
 |---------------------------|:---------:|-----------|:-----:|:--------------------------------------------------------------------------------------------------------:|
 | ResNet32-Baseline         | 92.49     | N/A       | N/A   | N/A                                                                                                      |
 | ResNet32-ADMM-TK          |   93.44   | N/A       |   3x  | lr=0.1, epochs=200, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=55, smoothing=0.1   |
