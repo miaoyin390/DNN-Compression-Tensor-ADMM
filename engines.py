@@ -201,6 +201,11 @@ def train(model, args):
         admm = None
         file_name = '{}_{}_{}'.format(args.model, args.dataset, timestamp)
 
+    log_path = os.path.join(output_dir, file_name + '.log')
+    if args.save_log:
+        with open(log_path, 'a') as f:
+            f.write(str(args))
+
     print(f"Start training for {args.epochs} epochs")
     max_acc1 = 0.
     max_acc5 = 0.
@@ -300,7 +305,6 @@ def train(model, args):
                      'n_parameters': n_parameters}
 
         if args.save_log and utils.is_main_process():
-            log_path = os.path.join(output_dir, file_name + '.log')
             with open(log_path, 'a') as f:
                 f.write(json.dumps(log_stats) + "\n")
 

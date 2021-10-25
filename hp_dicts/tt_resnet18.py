@@ -33,7 +33,7 @@ class HyperParamsDictSpecialRatio2x:
         'layer2.0.conv2.weight': [1, 100, 100, 1],
         'layer2.1.conv1.weight': [1, 100, 100, 1],
         'layer2.1.conv2.weight': [1, 100, 100, 1],
-        'layer3.0.conv1.weight': [1, 200, 150, 1],
+        'layer3.0.conv1.weight': [1, 200, 128, 1],
         'layer3.0.conv2.weight': [1, 135, 135, 1],
         'layer3.1.conv1.weight': [1, 135, 135, 1],
         'layer3.1.conv2.weight': [1, 135, 135, 1],
