@@ -68,9 +68,11 @@ def eval(model, args):
     utils.init_distributed_mode(args)
     device = torch.device(args.device)
     model.to(device)
-    # val_loader = get_data_loader(False, args)
-    data_loader_val = get_val_loader(args)
-    evaluate(data_loader_val, model, device, args.print_freq)
+    if args.timm_loader:
+        val_loader = get_val_loader(args)
+    else:
+        val_loader = get_data_loader(False, args)
+    evaluate(val_loader, model, device, args.print_freq)
 
 
 def train(model, args):
