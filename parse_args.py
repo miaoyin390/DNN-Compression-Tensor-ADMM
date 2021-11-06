@@ -128,6 +128,7 @@ def parse_args():
     parser.add_argument('--resume', default='', help='resume from checkpoint')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='start epoch')
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
+    parser.add_argument('--runtime', action='store_true', help='Perform runtime test only')
     parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
     parser.add_argument('--num-workers', default=10, type=int)
     parser.add_argument('--pin-memory', action='store_true', default=True,
