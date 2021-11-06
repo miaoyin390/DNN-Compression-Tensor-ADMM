@@ -98,11 +98,11 @@ def eval_runtime(model, args):
             with torch.cuda.amp.autocast():
                 output = model(images)
                 loss = criterion(output, target)
-            run_time += time.time() - current_time
+            run_time += (time.time() - current_time) * 1000 / len(images)
             avg_time += run_time
         avg_time /= len(val_loader)
         overall_time += avg_time
-        print('Average time per image (current / overall): {:.5f} / {:.5f}, '.format(i+1, avg_time, overall_time/(i+1)))
+        print('Average time per image (current / overall): {:.5f} / {:.5f} (ms), '.format(i+1, avg_time, overall_time/(i+1)))
 
 
 def train(model, args):
