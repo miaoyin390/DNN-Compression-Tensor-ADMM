@@ -305,6 +305,8 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
     elif 'tk' in format and 'resnet50' in model_name:
         if ratio == '3':
             from hp_dicts.tk_resnet50 import HyperParamsDictRatio3x as hp_dict
+        elif ratio == '10':
+            from hp_dicts.tk_resnet50 import HyperParamsDictRatio10x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
     elif 'tk' in format and 'mobilenetv2_100' in model_name:

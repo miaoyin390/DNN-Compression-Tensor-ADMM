@@ -390,10 +390,23 @@ def tkr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     return model
 
 
+@register_model
+def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tk_resnet(TKBottleneck, [3, 4, 6, 3], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == '__main__':
-    baseline = 'resnet18'
-    model_name = 'tkr_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, '2')
+    baseline = 'resnet50'
+    model_name = 'tkc_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, '10')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     tk_params = 0
     for name, p in model.named_parameters():
