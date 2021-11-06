@@ -87,18 +87,19 @@ def eval_runtime(model, args):
     criterion = torch.nn.CrossEntropyLoss()
     avg_time = 0
     overall_time = 0
+    run_time = 0
     for i in range(10):
         print('Test {}: '.format(i+1), end='', flush=True)
         for images, target in val_loader:
             images = images.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
             # compute output
-            run_time = 0
             current_time = time.time()
             with torch.cuda.amp.autocast():
                 output = model(images)
                 loss = criterion(output, target)
-            run_time += (time.time() - current_time) * 1000 / len(images)
+            run_time = (time.time() - current_time) * 1000 / len(images)
+            print(run_time)
             avg_time += run_time
         avg_time /= len(val_loader)
         overall_time += avg_time
