@@ -8,7 +8,7 @@ import timm
 import numpy as np
 
 import utils
-from engines import train, eval
+from engines import train, eval, eval_runtime
 from parse_args import parse_args
 
 import vit_tk
@@ -59,6 +59,11 @@ def main(args):
     )
 
     # Evaluation
+    if args.runtime:
+        print('===== Runtime Mode =====')
+        eval_runtime(model, args)
+        return
+
     if args.eval:
         print('===== Evaluation Mode =====')
         eval(model, args)

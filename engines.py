@@ -64,43 +64,6 @@ def evaluate(data_loader, model, device, print_freq=100):
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
-@torch.no_grad()
-def evaluate_runtime(data_loader, model, device, print_freq=100):
-    criterion = torch.nn.CrossEntropyLoss()
-
-    metric_logger = utils.MetricLogger(delimiter="  ")
-    header = 'Test:'
-
-    # switch to evaluation mode
-    model.eval()
-
-    run_time = 0
-    for i in range(20):
-        for images, target in metric_logger.log_every(data_loader, print_freq, header):
-            images = images.to(device, non_blocking=True)
-            target = target.to(device, non_blocking=True)
-            current_time = time.time()
-            # compute output
-            with torch.cuda.amp.autocast():
-                output = model(images)
-                loss = criterion(output, target)
-            run_time += time.time() - current_time
-
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-
-            batch_size = images.shape[0]
-            metric_logger.update(loss=loss.item())
-            metric_logger.meters['acc1'].update(acc1.item(), n=batch_size)
-            metric_logger.meters['acc5'].update(acc5.item(), n=batch_size)
-        # gather the stats from all processes
-        metric_logger.synchronize_between_processes()
-        print('Evaluation Result: Acc@1 {top1.global_avg:.3f}%, Acc@5 {top5.global_avg:.3f}%, loss {losses.global_avg:.3f}'
-              .format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
-    print('Average runtime: {}'.format(run_time/20))
-
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-
-
 def eval(model, args):
     utils.init_distributed_mode(args)
     device = torch.device(args.device)
@@ -110,6 +73,37 @@ def eval(model, args):
     else:
         val_loader = get_data_loader(False, args)
     evaluate(val_loader, model, device, args.print_freq)
+
+
+@torch.no_grad()
+def eval_runtime(model, args):
+    utils.init_distributed_mode(args)
+    device = torch.device(args.device)
+    model.to(device)
+    if args.timm_loader:
+        val_loader = get_val_loader(args)
+    else:
+        val_loader = get_data_loader(False, args)
+    criterion = torch.nn.CrossEntropyLoss()
+    avg_time = 0
+    overall_time = 0
+    for i in range(10):
+        for images, target in val_loader:
+            images = images.to(device, non_blocking=True)
+            target = target.to(device, non_blocking=True)
+            # compute output
+            run_time = 0
+            current_time = time.time()
+            with torch.cuda.amp.autocast():
+                output = model(images)
+                loss = criterion(output, target)
+            run_time += time.time() - current_time
+            avg_time += run_time
+        avg_time /= len(val_loader)
+        print('Test {}: Average time per task: {}'.format(i, avg_time))
+        overall_time += avg_time
+
+    print('=> Overall average time per task: {}'.format(overall_time/10))
 
 
 def train(model, args):
