@@ -102,7 +102,7 @@ def eval_runtime(model, args):
             avg_time += run_time
         avg_time /= len(val_loader)
         overall_time += avg_time
-        print('Average time per image (current / overall): {:.5f} / {:.5f} (ms), '.format(i+1, avg_time, overall_time/(i+1)))
+        print('Average time per image (current / overall): {:.5f} / {:.5f} (ms), '.format(avg_time, overall_time/(i+1)))
 
 
 def train(model, args):
