@@ -99,7 +99,8 @@ def eval_runtime(model, args):
             output = model(images)
             loss = criterion(output, target)
             run_time = (time.time() - current_time) * 1000 / len(images)
-            print(run_time)
+            if args.device == 'cpu':
+                print(run_time)
             avg_time += run_time
         avg_time /= len(val_loader)
         overall_time += avg_time
