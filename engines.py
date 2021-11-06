@@ -95,9 +95,9 @@ def eval_runtime(model, args):
             target = target.to(device, non_blocking=True)
             # compute output
             current_time = time.time()
-            with torch.cuda.amp.autocast():
-                output = model(images)
-                loss = criterion(output, target)
+            # with torch.cuda.amp.autocast():
+            output = model(images)
+            loss = criterion(output, target)
             run_time = (time.time() - current_time) * 1000 / len(images)
             print(run_time)
             avg_time += run_time
