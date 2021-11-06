@@ -88,6 +88,7 @@ def eval_runtime(model, args):
     avg_time = 0
     overall_time = 0
     for i in range(10):
+        print('Test {}: '.format(i+1), end='', flush=True)
         for images, target in val_loader:
             images = images.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
@@ -101,7 +102,7 @@ def eval_runtime(model, args):
             avg_time += run_time
         avg_time /= len(val_loader)
         overall_time += avg_time
-        print('Test {}: Average time per image (current / overall): {} / {}, '.format(i+1, avg_time, overall_time/(i+1)))
+        print('Average time per image (current / overall): {:.5f} / {:.5f}, '.format(i+1, avg_time, overall_time/(i+1)))
 
 
 def train(model, args):
