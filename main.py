@@ -46,7 +46,8 @@ def main(args):
     else:
         model_dict = dict()
 
-    torch.cuda.set_device(f'cuda:{list(args.gpus)[0]}')
+    if args.device == 'cuda':
+        torch.cuda.set_device(f'cuda:{list(args.gpus)[0]}')
 
     model = timm.create_model(
         args.model,
