@@ -23,7 +23,7 @@
 | ResNet18-ADMM-TTR-special | 69.60     | 89.16     | 2.65x | lr=0.01, epochs=150, optimizer=momentum, scheduler=step, decay_rate=0.1, decay_epochs=40                 |
 | ResNet18-FT-TTR-special   | 69.82     | 89.18     | 2.65x | lr=0.001, epochs=105, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=30                |
 | ResNet50-Baseline         | 76.13     | 92.86     | N/A   | Torchvision                                                                                              |
-| ResNet50-ADMM-TTR-general |       |       | 3.05x | lr=0.01, epochs=150, optimizer=momentum, scheduler=cosine                 |
-| ResNet50-FT-TTR-general   |      |       | 3.05x | lr=0.001, epochs=105, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=30                         |
+| ResNet50-ADMM-TTR-general | 76.98  |   93.34    | 3.05x | lr=0.01, epochs=150, optimizer=momentum, scheduler=step, decay_rate=0.1, decay_epochs=40                 |
+| ResNet50-FT-TTR-general   | 76.44 |  93.18 | 3.05x | lr=0.001, epochs=105, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=30                         |
 | ResNet50-ADMM-TTR-special |     |       | 3.05x | lr=0.01, epochs=150, optimizer=momentum, scheduler=cosine                 |
 | ResNet50-FT-TTR-special   |      |       | 3.05x | lr=0.001, epochs=105, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=30                    |
