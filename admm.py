@@ -13,8 +13,9 @@ from ttd import ten2tt, tt2ten
 
 
 class ADMM:
-    def __init__(self, model, hp_dict, format, device, verbose=False, log=False):
+    def __init__(self, model, rho, hp_dict, format, device, verbose=False, log=False):
         self.model = model
+        self.init_rho = rho
         self.hp_dict = hp_dict
         self.format = format
         self.device = device
@@ -25,6 +26,8 @@ class ADMM:
 
         if format == 'none':
             raise Exception('ERROR: Tensor format should be specified!')
+
+        self.rho = self.init_rho
 
         self.u = {}
         self.z = {}
@@ -69,12 +72,16 @@ class ADMM:
                         if self.verbose:
                             print('*INFO: {} in ADMM, norm(w-z)={}'.format(name, torch.norm(diff, p=2)))
 
-    def append_admm_loss(self, rho, loss):
+    def append_admm_loss(self, loss):
         for name, param in self.model.named_parameters():
             if name in self.hp_dict.ranks.keys():
-                loss += 0.5 * rho * (torch.norm(param - self.z[name] + self.u[name], p=2)) ** 2
+                loss += 0.5 * self.rho * (torch.norm(param - self.z[name] + self.u[name], p=2)) ** 2
                 # dense_loss += 0.5 * rho * p.norm()
         return loss
+
+    def adjust_rho(self, epoch, epochs):
+        if epoch > int(0.85 * epochs):
+            self.rho = 10 * self.init_rho
 
     def prune_conv_rank_tt(self, z, name):
         kernel_shape = z.shape

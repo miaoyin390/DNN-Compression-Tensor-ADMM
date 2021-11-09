@@ -227,8 +227,8 @@ def train(model, args):
 
     # ADMM initialization
     if args.admm:
-        admm = ADMM(model_without_ddp, get_hp_dict(args.model, args.ratio, args.format, args.tt_type), args.format,
-                    device, verbose=args.verbose, log=args.log)
+        admm = ADMM(model_without_ddp, args.rho, get_hp_dict(args.model, args.ratio, args.format, args.tt_type),
+                    args.format, device, verbose=args.verbose, log=args.log)
         file_name = '{}_{}_admm_{}_{}'.format(args.model, args.dataset, args.format, timestamp)
         admm.update(update_u=False)
     else:
@@ -256,6 +256,7 @@ def train(model, args):
 
         if args.admm:
             admm.update()
+            admm.adjust_rho(epoch, args.epochs)
 
         for step, (samples, targets) in enumerate(metric_logger.log_every(data_loader_train, args.print_freq, header)):
             samples = samples.to(device)
@@ -272,12 +273,12 @@ def train(model, args):
                     outputs = model(samples)
                     loss = criterion(samples, outputs, targets)
                     if args.admm:
-                        loss = admm.append_admm_loss(args.rho, loss)
+                        loss = admm.append_admm_loss(loss)
             else:
                 outputs = model(samples)
                 loss = criterion(samples, outputs, targets)
                 if args.admm:
-                    loss = admm.append_admm_loss(args.rho, loss)
+                    loss = admm.append_admm_loss(loss)
 
             loss_value = loss.item()
 
