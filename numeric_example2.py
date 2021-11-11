@@ -77,3 +77,6 @@ for i in range(order - 1, -1, -1):
 y = h.reshape([out_channels, batch_size, height_, width_]).permute([1, 0, 2, 3])
 # print(y.shape)
 print('Speedup: {}'.format(flops/tt_flops))
+
+print(y.size()[1:].numel())
+# print(torch.prod(y.shape[1:]))

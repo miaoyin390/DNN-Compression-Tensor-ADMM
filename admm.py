@@ -49,7 +49,6 @@ class ADMM:
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tk(z.detach().cpu().numpy(), name)).to(self.device)
                     else:
-                        print(name)
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
                 # elif 'fc' in name or 'qkv' in name or 'proj' in name:

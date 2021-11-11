@@ -71,7 +71,7 @@ class TTConv2dM(Module):
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if from_dense or dense_w is not None:
             w = dense_w.detach().cpu().numpy()
             kernel_shape = w.shape
             w = np.reshape(w, [self.out_channels, self.in_channels, -1])
@@ -218,7 +218,7 @@ class TTConv2dR(Module):
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if from_dense or dense_w is not None:
             w = dense_w.detach().cpu().numpy()
             w = np.reshape(w, [self.out_channels, self.in_channels, -1])
             tt_shapes = self.out_tt_shapes + [w.shape[-1]] + self.in_tt_shapes
