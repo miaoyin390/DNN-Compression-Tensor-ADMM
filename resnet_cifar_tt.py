@@ -205,12 +205,12 @@ def ttm_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    model_name = 'ttr_resnet32'
+    model_name = 'ttr_resnet56'
     hp_dict = utils.get_hp_dict(model_name, '3')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     n_params = 0
     for name, p in model.named_parameters():
         if 'conv' in name or 'linear' in name:
             print(name, p.shape)
-            n_params += int(np.prod(p.shape))
+            n_params += p.numel()
     print('Total # parameters: {}'.format(n_params))
