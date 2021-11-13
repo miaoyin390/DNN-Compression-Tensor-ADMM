@@ -122,7 +122,8 @@ class TKResNet(nn.Module):
         return out
 
 
-def _tk_resnet(num_blocks, num_classes=10, conv=TKConv2dR, hp_dict=None, dense_dict=None, **kwargs):
+def _tk_resnet(num_blocks, num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC], hp_dict=None,
+               dense_dict=None, **kwargs):
     if 'num_classes' in kwargs.keys():
         num_classes = kwargs.get('num_classes')
     model = TKResNet(num_blocks, num_classes=num_classes, conv=conv, hp_dict=hp_dict, dense_dict=dense_dict)
@@ -162,6 +163,19 @@ def tkr_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     else:
         dense_dict = None
     model = _tk_resnet([3, 3, 3], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkr_resnet56(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tk_resnet([9, 9, 9], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
@@ -221,12 +235,12 @@ def tkc_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    model_name = 'tkr_resnet32'
+    model_name = 'tkr_resnet56'
     hp_dict = utils.get_hp_dict(model_name, '3')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     n_params = 0
     for name, p in model.named_parameters():
         if 'conv' in name or 'linear' in name:
             print(name, p.shape)
-            n_params += int(np.prod(p.shape))
+            n_params += p.numel()
     print('Total # parameters: {}'.format(n_params))

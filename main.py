@@ -12,6 +12,7 @@ from engines import train, eval, eval_runtime
 from parse_args import parse_args
 
 import mobilenetv2
+import mobilenetv2_tt
 import vit_tk
 import vit_tt
 import resnet_cifar

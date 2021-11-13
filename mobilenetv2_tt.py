@@ -15,6 +15,7 @@ from torchvision.models.utils import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 from TTConv import TTConv2dM, TTConv2dR
+from mobilenetv2 import mobilenetv2
 from timm.models.registry import register_model
 
 __all__ = ['TTMobileNetV2', 'ttr_mobilenetv2']
@@ -240,9 +241,12 @@ def _tt_mobilenetv2(conv, hp_dict, dense_dict=None, **kwargs):
 def ttr_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         dense_dict = torch.load(path, map_location='cpu')
+        dense_dict_ = mobilenetv2().state_dict()
+        for k1, k2 in zip(dense_dict_.keys(), dense_dict.keys()):
+            dense_dict_[k1].data = dense_dict[k2]
     else:
-        dense_dict = None
-    model = _tt_mobilenetv2(conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+        dense_dict_ = None
+    model = _tt_mobilenetv2(conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict_, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
@@ -251,7 +255,7 @@ def ttr_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwa
 
 
 if __name__ == '__main__':
-    from hp_dicts.tt_mobilenetv2 import HyperParamsDictRatio2x as hp_dict
+    from hp_dicts.tt_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
     model = timm.create_model('ttr_mobilenetv2', hp_dict=hp_dict, decompose=None)
     n_params = 0
     for name, p in model.named_parameters():

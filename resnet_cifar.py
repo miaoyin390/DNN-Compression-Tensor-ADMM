@@ -108,6 +108,13 @@ def resnet32(pretrained=False, path=None, **kwargs):
         model.load_state_dict(state_dict)
     return model
 
+@register_model
+def resnet56(pretrained=False, path=None, **kwargs):
+    model = _resnet([9, 9, 9], **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
 
 @register_model
 def resnet20(pretrained=False, path=None, **kwargs):
@@ -119,10 +126,10 @@ def resnet20(pretrained=False, path=None, **kwargs):
 
 
 if __name__ == '__main__':
-    model = timm.create_model('resnet32')
+    model = timm.create_model('resnet56')
     n_params = 0
     for name, p in model.named_parameters():
         if 'conv' in name or 'linear' in name:
-            print(name, np.array(p.shape))
-            n_params += int(np.prod(np.array(p.shape)))
+            print('\'{}\': {},'.format(name, list(p.shape)))
+            n_params += p.numel()
     print('Total # parameters: {}'.format(n_params))

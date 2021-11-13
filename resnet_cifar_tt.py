@@ -166,6 +166,19 @@ def ttr_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 @register_model
+def ttr_resnet56(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([9, 9, 9], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
 def ttm_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         dense_dict = torch.load(path, map_location='cpu')

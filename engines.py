@@ -256,7 +256,7 @@ def train(model, args):
 
         if args.admm:
             admm.update()
-            admm.adjust_rho(epoch, args.epochs)
+            # admm.adjust_rho(epoch, args.epochs)
 
         for step, (samples, targets) in enumerate(metric_logger.log_every(data_loader_train, args.print_freq, header)):
             samples = samples.to(device)
