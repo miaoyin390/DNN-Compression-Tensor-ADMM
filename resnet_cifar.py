@@ -126,10 +126,10 @@ def resnet20(pretrained=False, path=None, **kwargs):
 
 
 if __name__ == '__main__':
-    model = timm.create_model('resnet56')
+    model = timm.create_model('resnet32')
     n_params = 0
     for name, p in model.named_parameters():
-        if 'conv' in name or 'linear' in name:
+        if p.requires_grad:
             print('\'{}\': {},'.format(name, list(p.shape)))
             n_params += p.numel()
     print('Total # parameters: {}'.format(n_params))
