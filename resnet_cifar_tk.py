@@ -235,8 +235,8 @@ def tkc_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    model_name = 'tkr_resnet32'
-    hp_dict = utils.get_hp_dict(model_name, '5')
+    model_name = 'tkr_resnet56'
+    hp_dict = utils.get_hp_dict(model_name, '2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     n_params = 0
     for name, p in model.named_parameters():
