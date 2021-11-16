@@ -29,6 +29,7 @@ import utils
 from utils import get_hp_dict
 from utils import normal_adjust_lr
 from admm import ADMM
+import orthogonal
 
 
 @torch.no_grad()
@@ -274,11 +275,15 @@ def train(model, args):
                     loss = criterion(samples, outputs, targets)
                     if args.admm:
                         loss = admm.append_admm_loss(loss)
+                    if args.orthogonal:
+                        loss = orthogonal.append_double_l2_loss(model_without_ddp, loss, args.rho)
             else:
                 outputs = model(samples)
                 loss = criterion(samples, outputs, targets)
                 if args.admm:
                     loss = admm.append_admm_loss(loss)
+                if args.orthogonal:
+                    loss = orthogonal.append_double_l2_loss(model_without_ddp, loss, args.rho)
 
             loss_value = loss.item()
 

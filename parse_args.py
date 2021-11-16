@@ -146,6 +146,7 @@ def parse_args():
     parser.add_argument('--num-classes', default=10, type=int, metavar='N', help='Number of classes')
     parser.add_argument('--print-freq', default=100, type=int, metavar='N', help='print frequency')
     parser.add_argument('--admm', action='store_true', default=False, help='Enabling ADMM training mode')
+    parser.add_argument('--orthogonal', action='store_true', default=False, help='Enabling orthogonal regularization')
     parser.add_argument('--save-log', action='store_true', default=False, help='Enabling saving log file')
     parser.add_argument('--save-model', action='store_true', default=False, help='Enabling saving model')
     parser.add_argument('--model-path', type=str, default=None, help='Initialized model path')
@@ -153,7 +154,7 @@ def parse_args():
                         help='Initialize the model from a pretrained model')
     parser.add_argument('--decompose', action='store_true', default=None,
                         help='Initialize the model via decomposing an uncompressed one')
-    parser.add_argument('--ratio', default='2', choices=['2', '2.4', '2.5', '3', '5', '10'], type=str, help="")
+    parser.add_argument('--ratio', default='2', choices=['1.5', '2', '3', '5', '10'], type=str, help="")
     parser.add_argument('--tt-type', default='general', choices=['general', 'special'], type=str, help="")
     parser.add_argument('--format', default='', choices=['none', 'tk', 'tt'], type=str, help="")
     parser.add_argument('--verbose', action='store_true', default=False)
