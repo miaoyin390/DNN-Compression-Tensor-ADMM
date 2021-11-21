@@ -105,22 +105,22 @@ class HyperParamsDictGeneralRatio2x:
     }
 
     ranks = {
-        'layer1.0.conv1.weight': [1, 7, 40, 40, 7, 1],
+        'layer1.0.conv1.weight': [1, 8, 35, 35, 8, 1],
         'layer1.0.conv2.weight': [1, 7, 32, 32, 7, 1],
         'layer1.1.conv1.weight': [1, 7, 32, 32, 7, 1],
-        'layer1.1.conv2.weight': [1, 6, 32, 32, 6, 1],
-        'layer2.0.conv1.weight': [1, 15, 80, 45, 8, 1],
+        'layer1.1.conv2.weight': [1, 7, 32, 32, 7, 1],
+        'layer2.0.conv1.weight': [1, 15, 75, 40, 8, 1],
         'layer2.0.conv2.weight': [1, 15, 64, 64, 15, 1],
-        'layer2.1.conv1.weight': [1, 13, 64, 64, 13, 1],
-        'layer2.1.conv2.weight': [1, 13, 60, 60, 13, 1],
+        'layer2.1.conv1.weight': [1, 15, 64, 64, 15, 1],
+        'layer2.1.conv2.weight': [1, 15, 60, 60, 15, 1],
         'layer3.0.conv1.weight': [1, 15, 140, 70, 15, 1],
-        'layer3.0.conv2.weight': [1, 14, 125, 125, 14, 1],
-        'layer3.1.conv1.weight': [1, 14, 125, 125, 14, 1],
-        'layer3.1.conv2.weight': [1, 13, 110, 110, 13, 1],
+        'layer3.0.conv2.weight': [1, 15, 125, 125, 15, 1],
+        'layer3.1.conv1.weight': [1, 15, 125, 125, 15, 1],
+        'layer3.1.conv2.weight': [1, 15, 110, 110, 15, 1],
         'layer4.0.conv1.weight': [1, 30, 256, 128, 15, 1],
-        'layer4.0.conv2.weight': [1, 28, 250, 250, 28, 1],
-        'layer4.1.conv1.weight': [1, 28, 250, 250, 28, 1],
-        'layer4.1.conv2.weight': [1, 28, 250, 250, 28, 1],
+        'layer4.0.conv2.weight': [1, 30, 250, 250, 30, 1],
+        'layer4.1.conv1.weight': [1, 30, 250, 250, 30, 1],
+        'layer4.1.conv2.weight': [1, 30, 250, 250, 30, 1],
     }
 
     in_ranks = {
