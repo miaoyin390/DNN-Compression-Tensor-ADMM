@@ -41,7 +41,7 @@ class TTConv2dM(Module):
                 self.in_tt_order = self.tt_order - self.out_tt_order - 1
                 break
         self.out_tt_shapes = self.tt_shapes[:self.out_tt_order]
-        self.in_tt_shapes = self.tt_shapes[self.out_tt_order+1:]
+        self.in_tt_shapes = self.tt_shapes[self.out_tt_order + 1:]
 
         assert in_channels == int(np.prod(self.in_tt_shapes))
         assert out_channels == int(np.prod(self.out_tt_shapes))
@@ -50,12 +50,15 @@ class TTConv2dM(Module):
         self.out_channels = out_channels
 
         self.tt_ranks = list(tt_ranks)
-        self.out_tt_ranks = self.tt_ranks[:self.out_tt_order+1]
-        self.in_tt_ranks = self.tt_ranks[self.out_tt_order+1:]
+        self.out_tt_ranks = self.tt_ranks[:self.out_tt_order + 1]
+        self.in_tt_ranks = self.tt_ranks[self.out_tt_order + 1:]
 
         self.in_tt_cores = ParameterList([Parameter(torch.Tensor(
-                    self.in_tt_ranks[i], self.in_tt_shapes[i], self.in_tt_ranks[i+1]))
-                    for i in range(self.in_tt_order)])
+            self.in_tt_ranks[i], self.in_tt_shapes[i], self.in_tt_ranks[i + 1]))
+            for i in range(self.in_tt_order)])
+
+        self.kernel_size = kernel_size
+        self.stride = stride
 
         self.core_conv = torch.nn.Conv2d(in_channels=self.in_tt_ranks[0],
                                          out_channels=self.out_tt_ranks[-1], kernel_size=kernel_size,
@@ -63,7 +66,7 @@ class TTConv2dM(Module):
                                          groups=groups, bias=False, padding_mode=padding_mode)
 
         self.out_tt_cores = ParameterList([Parameter(torch.Tensor(
-            self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i+1]))
+            self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i + 1]))
             for i in range(self.out_tt_order)])
 
         if bias:
@@ -85,7 +88,7 @@ class TTConv2dM(Module):
                     self.core_conv.weight.data = torch.from_numpy(tt_cores[i]).permute(0, 2, 1).reshape(
                         self.out_tt_ranks[-1], self.in_tt_ranks[0], kernel_shape[2], kernel_shape[3])
                 else:
-                    self.in_tt_cores[i-self.out_tt_order-1].data = torch.from_numpy(tt_cores[i])
+                    self.in_tt_cores[i - self.out_tt_order - 1].data = torch.from_numpy(tt_cores[i])
 
             if bias:
                 self.bias.data = dense_b
@@ -112,18 +115,20 @@ class TTConv2dM(Module):
     def forward(self, x):
         batch_size, channels, height, width = x.shape
         out = x.permute(0, 2, 3, 1)
-        for i in range(self.in_tt_order-1, -1, -1):
-            out = torch.mm(self.in_tt_cores[i].reshape(self.in_tt_ranks[i], self.in_tt_shapes[i]*self.in_tt_ranks[i+1]),
-                           out.reshape(-1, self.in_tt_shapes[i] * self.in_tt_ranks[i+1]).t()).t()
+        for i in range(self.in_tt_order - 1, -1, -1):
+            out = torch.mm(
+                self.in_tt_cores[i].reshape(self.in_tt_ranks[i], self.in_tt_shapes[i] * self.in_tt_ranks[i + 1]),
+                out.reshape(-1, self.in_tt_shapes[i] * self.in_tt_ranks[i + 1]).t()).t()
         out = out.reshape(batch_size, height, width, self.in_tt_ranks[0]).permute(0, 3, 1, 2)
 
         out = self.core_conv(out)
         _, _, height_, width_ = out.shape
 
         out = out.permute(0, 2, 3, 1)
-        for i in range(self.out_tt_order-1, -1, -1):
-            out = torch.mm(self.out_tt_cores[i].reshape(self.out_tt_ranks[i]*self.out_tt_shapes[i], self.out_tt_ranks[i+1]),
-                           out.reshape(-1, self.out_tt_ranks[i+1]).t())
+        for i in range(self.out_tt_order - 1, -1, -1):
+            out = torch.mm(
+                self.out_tt_cores[i].reshape(self.out_tt_ranks[i] * self.out_tt_shapes[i], self.out_tt_ranks[i + 1]),
+                out.reshape(-1, self.out_tt_ranks[i + 1]).t())
             out = out.reshape(self.out_tt_ranks[i], -1).t()
 
         out = out.reshape(self.out_channels, batch_size, height_, width_).permute(1, 0, 2, 3)
@@ -131,6 +136,50 @@ class TTConv2dM(Module):
             out += self.bias
 
         return out
+
+    def forward_flops(self, x, name):
+        print('>{}'.format(name))
+        tt_params = 0
+        tt_flops = 0
+        batch_size, channels, height, width = x.shape
+        out = x.permute(0, 2, 3, 1)
+        for i in range(self.in_tt_order - 1, -1, -1):
+            a = self.in_tt_cores[i].reshape(self.in_tt_ranks[i], self.in_tt_shapes[i] * self.in_tt_ranks[i + 1])
+            b = out.reshape(-1, self.in_tt_shapes[i] * self.in_tt_ranks[i + 1]).t()
+            out = torch.mm(a, b).t()
+            tt_flops += a.shape[0] * a.shape[1] * b.shape[1] / 1000 / 1000
+        out = out.reshape(batch_size, height, width, self.in_tt_ranks[0]).permute(0, 3, 1, 2)
+
+        out = self.core_conv(out)
+        _, _, height_, width_ = out.shape
+        tt_flops += height_ * width_ * self.kernel_size * self.kernel_size * \
+                    self.core_conv.in_channels * self.core_conv.out_channels / 1000 / 1000
+
+        out = out.permute(0, 2, 3, 1)
+        for i in range(self.out_tt_order - 1, -1, -1):
+            a = self.out_tt_cores[i].reshape(self.out_tt_ranks[i] * self.out_tt_shapes[i], self.out_tt_ranks[i + 1])
+            b = out.reshape(-1, self.out_tt_ranks[i + 1]).t()
+            out = torch.mm(a, b).reshape(self.out_tt_ranks[i], -1).t()
+            tt_flops += a.shape[0] * a.shape[1] * b.shape[1] / 1000 / 1000
+
+        out = out.reshape(self.out_channels, batch_size, height_, width_).permute(1, 0, 2, 3)
+        if self.bias is not None:
+            out += self.bias
+
+        base_flops = height_ * width_ * self.kernel_size * self.kernel_size * self.in_channels * \
+                     self.out_channels / 1000 / 1000
+
+        for core in self.in_tt_cores:
+            tt_params += core.numel()
+        for core in self.out_tt_cores:
+            tt_params += core.numel()
+        tt_params += self.core_conv.weight.numel()
+        base_params = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels
+
+        print('baseline # params: {:.2f}K, tt # params: {:.2f}K'.format(base_params/1000, tt_params/1000))
+        print('baseline # flops: {:.2f}M, tt # flops: {:.2f}M'.format(base_flops, tt_flops))
+
+        return out, tt_flops
 
 
 class TTConv2dR(Module):
@@ -166,12 +215,12 @@ class TTConv2dR(Module):
                 self.in_tt_order = self.tt_order - self.out_tt_order - 1
                 break
         self.out_tt_shapes = self.tt_shapes[:self.out_tt_order]
-        self.in_tt_shapes = self.tt_shapes[self.out_tt_order+1:]
+        self.in_tt_shapes = self.tt_shapes[self.out_tt_order + 1:]
 
         # output channels are in front of input channels in the original kernel
         self.tt_ranks = list(tt_ranks)
-        self.out_tt_ranks = self.tt_ranks[:self.out_tt_order+1]
-        self.in_tt_ranks = self.tt_ranks[self.out_tt_order+1:]
+        self.out_tt_ranks = self.tt_ranks[:self.out_tt_order + 1]
+        self.in_tt_ranks = self.tt_ranks[self.out_tt_order + 1:]
 
         assert in_channels == int(np.prod(self.in_tt_shapes))
         assert out_channels == int(np.prod(self.out_tt_shapes))
@@ -204,14 +253,14 @@ class TTConv2dR(Module):
         self.filter_dim = int(self.kernel_shape[2] * self.kernel_shape[3])
 
         self.out_tt_cores = ParameterList([Parameter(torch.Tensor(
-            self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i+1]))
+            self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i + 1]))
             for i in range(self.out_tt_order)])
 
         self.conv_core = Parameter(torch.Tensor(self.out_tt_ranks[-1], self.filter_dim, self.in_tt_ranks[0]))
 
         self.in_tt_cores = ParameterList([Parameter(torch.Tensor(
-                    self.in_tt_ranks[i], self.in_tt_shapes[i], self.in_tt_ranks[i+1]))
-                    for i in range(self.in_tt_order)])
+            self.in_tt_ranks[i], self.in_tt_shapes[i], self.in_tt_ranks[i + 1]))
+            for i in range(self.in_tt_order)])
 
         if bias:
             self.bias = Parameter(torch.Tensor(self.out_channels))
@@ -230,7 +279,7 @@ class TTConv2dR(Module):
                 elif i == self.out_tt_order:
                     self.conv_core.data = torch.from_numpy(tt_cores[i])
                 else:
-                    self.in_tt_cores[i-self.out_tt_order-1].data = torch.from_numpy(tt_cores[i])
+                    self.in_tt_cores[i - self.out_tt_order - 1].data = torch.from_numpy(tt_cores[i])
 
             if bias:
                 self.bias.data = dense_b

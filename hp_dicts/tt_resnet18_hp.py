@@ -3,6 +3,8 @@
 # Author: MIAO YIN
 # Time: 2021/10/18 17:09
 
+# in_order = len(in_tt_shapes)
+# out_order = len(out_tt_shapes)
 
 class HyperParamsDictSpecialRatio2x:
     tt_shapes = {
@@ -25,22 +27,22 @@ class HyperParamsDictSpecialRatio2x:
     }
 
     ranks = {
-        'layer1.0.conv1.weight': [1, 64, 64, 1],
-        'layer1.0.conv2.weight': [1, 64, 64, 1],
-        'layer1.1.conv1.weight': [1, 64, 64, 1],
-        'layer1.1.conv2.weight': [1, 64, 64, 1],
-        'layer2.0.conv1.weight': [1, 120, 60, 1],
-        'layer2.0.conv2.weight': [1, 100, 100, 1],
-        'layer2.1.conv1.weight': [1, 100, 100, 1],
-        'layer2.1.conv2.weight': [1, 100, 100, 1],
-        'layer3.0.conv1.weight': [1, 200, 128, 1],
-        'layer3.0.conv2.weight': [1, 135, 135, 1],
-        'layer3.1.conv1.weight': [1, 135, 135, 1],
-        'layer3.1.conv2.weight': [1, 135, 135, 1],
-        'layer4.0.conv1.weight': [1, 320, 200, 1],
-        'layer4.0.conv2.weight': [1, 170, 170, 1],
-        'layer4.1.conv1.weight': [1, 170, 170, 1],
-        'layer4.1.conv2.weight': [1, 170, 170, 1],
+        'layer1.0.conv1.weight': [1, 45, 45, 1],
+        'layer1.0.conv2.weight': [1, 36, 36, 1],
+        'layer1.1.conv1.weight': [1, 32, 32, 1],
+        'layer1.1.conv2.weight': [1, 32, 32, 1],
+        'layer2.0.conv1.weight': [1, 80, 40, 1],
+        'layer2.0.conv2.weight': [1, 70, 70, 1],
+        'layer2.1.conv1.weight': [1, 65, 65, 1],
+        'layer2.1.conv2.weight': [1, 64, 64, 1],
+        'layer3.0.conv1.weight': [1, 130, 65, 1],
+        'layer3.0.conv2.weight': [1, 120, 120, 1],
+        'layer3.1.conv1.weight': [1, 120, 120, 1],
+        'layer3.1.conv2.weight': [1, 115, 115, 1],
+        'layer4.0.conv1.weight': [1, 250, 122, 1],
+        'layer4.0.conv2.weight': [1, 240, 240, 1],
+        'layer4.1.conv1.weight': [1, 230, 230, 1],
+        'layer4.1.conv2.weight': [1, 220, 220, 1],
     }
 
 
@@ -103,22 +105,22 @@ class HyperParamsDictGeneralRatio2x:
     }
 
     ranks = {
-        'layer1.0.conv1.weight': [1, 8, 64, 64, 8, 1],
-        'layer1.0.conv2.weight': [1, 8, 60, 60, 8, 1],
-        'layer1.1.conv1.weight': [1, 8, 60, 60, 8, 1],
-        'layer1.1.conv2.weight': [1, 8, 60, 60, 8, 1],
-        'layer2.0.conv1.weight': [1, 16, 128, 64, 8, 1],
-        'layer2.0.conv2.weight': [1, 16, 100, 100, 8, 1],
-        'layer2.1.conv1.weight': [1, 16, 100, 100, 8, 1],
-        'layer2.1.conv2.weight': [1, 16, 100, 100, 8, 1],
-        'layer3.0.conv1.weight': [1, 16, 200, 100, 16, 1],
-        'layer3.0.conv2.weight': [1, 16, 160, 160, 16, 1],
-        'layer3.1.conv1.weight': [1, 16, 160, 160, 16, 1],
-        'layer3.1.conv2.weight': [1, 16, 160, 160, 16, 1],
-        'layer4.0.conv1.weight': [1, 32, 256, 128, 16, 1],
-        'layer4.0.conv2.weight': [1, 32, 180, 180, 32, 1],
-        'layer4.1.conv1.weight': [1, 32, 180, 180, 32, 1],
-        'layer4.1.conv2.weight': [1, 32, 180, 180, 32, 1],
+        'layer1.0.conv1.weight': [1, 7, 40, 40, 7, 1],
+        'layer1.0.conv2.weight': [1, 7, 32, 32, 7, 1],
+        'layer1.1.conv1.weight': [1, 7, 32, 32, 7, 1],
+        'layer1.1.conv2.weight': [1, 6, 32, 32, 6, 1],
+        'layer2.0.conv1.weight': [1, 15, 80, 45, 8, 1],
+        'layer2.0.conv2.weight': [1, 15, 64, 64, 15, 1],
+        'layer2.1.conv1.weight': [1, 13, 64, 64, 13, 1],
+        'layer2.1.conv2.weight': [1, 13, 60, 60, 13, 1],
+        'layer3.0.conv1.weight': [1, 15, 140, 70, 15, 1],
+        'layer3.0.conv2.weight': [1, 14, 125, 125, 14, 1],
+        'layer3.1.conv1.weight': [1, 14, 125, 125, 14, 1],
+        'layer3.1.conv2.weight': [1, 13, 110, 110, 13, 1],
+        'layer4.0.conv1.weight': [1, 30, 256, 128, 15, 1],
+        'layer4.0.conv2.weight': [1, 28, 250, 250, 28, 1],
+        'layer4.1.conv1.weight': [1, 28, 250, 250, 28, 1],
+        'layer4.1.conv2.weight': [1, 28, 250, 250, 28, 1],
     }
 
     in_ranks = {
@@ -127,17 +129,17 @@ class HyperParamsDictGeneralRatio2x:
         'layer1.1.conv1.weight': [60, 8, 1],
         'layer1.1.conv2.weight': [60, 8, 1],
         'layer2.0.conv1.weight': [64, 8, 1],
-        'layer2.0.conv2.weight': [100, 8, 1],
-        'layer2.1.conv1.weight': [100, 8, 1],
-        'layer2.1.conv2.weight': [100, 8, 1],
-        'layer3.0.conv1.weight': [100, 16, 1],
-        'layer3.0.conv2.weight': [160, 16, 1],
-        'layer3.1.conv1.weight': [160, 16, 1],
-        'layer3.1.conv2.weight': [160, 16, 1],
-        'layer4.0.conv1.weight': [128, 16, 1],
-        'layer4.0.conv2.weight': [180, 32, 1],
-        'layer4.1.conv1.weight': [180, 32, 1],
-        'layer4.1.conv2.weight': [180, 32, 1],
+        'layer2.0.conv2.weight': [100, 15, 1],
+        'layer2.1.conv1.weight': [100, 15, 1],
+        'layer2.1.conv2.weight': [100, 15, 1],
+        'layer3.0.conv1.weight': [100, 15, 1],
+        'layer3.0.conv2.weight': [160, 15, 1],
+        'layer3.1.conv1.weight': [160, 15, 1],
+        'layer3.1.conv2.weight': [160, 15, 1],
+        'layer4.0.conv1.weight': [128, 15, 1],
+        'layer4.0.conv2.weight': [180, 30, 1],
+        'layer4.1.conv1.weight': [180, 30, 1],
+        'layer4.1.conv2.weight': [180, 30, 1],
     }
 
     out_ranks = {
@@ -145,16 +147,16 @@ class HyperParamsDictGeneralRatio2x:
         'layer1.0.conv2.weight': [1, 8, 60],
         'layer1.1.conv1.weight': [1, 8, 60],
         'layer1.1.conv2.weight': [1, 8, 60],
-        'layer2.0.conv1.weight': [1, 16, 128],
-        'layer2.0.conv2.weight': [1, 16, 100],
-        'layer2.1.conv1.weight': [1, 16, 100],
-        'layer2.1.conv2.weight': [1, 16, 100],
-        'layer3.0.conv1.weight': [1, 16, 200],
-        'layer3.0.conv2.weight': [1, 16, 160],
-        'layer3.1.conv1.weight': [1, 16, 160],
-        'layer3.1.conv2.weight': [1, 16, 160],
-        'layer4.0.conv1.weight': [1, 32, 256],
-        'layer4.0.conv2.weight': [1, 32, 180],
-        'layer4.1.conv1.weight': [1, 32, 180],
-        'layer4.1.conv2.weight': [1, 32, 180],
+        'layer2.0.conv1.weight': [1, 15, 128],
+        'layer2.0.conv2.weight': [1, 15, 100],
+        'layer2.1.conv1.weight': [1, 15, 100],
+        'layer2.1.conv2.weight': [1, 15, 100],
+        'layer3.0.conv1.weight': [1, 15, 200],
+        'layer3.0.conv2.weight': [1, 15, 160],
+        'layer3.1.conv1.weight': [1, 15, 160],
+        'layer3.1.conv2.weight': [1, 15, 160],
+        'layer4.0.conv1.weight': [1, 30, 256],
+        'layer4.0.conv2.weight': [1, 30, 180],
+        'layer4.1.conv1.weight': [1, 30, 180],
+        'layer4.1.conv2.weight': [1, 30, 180],
     }

@@ -88,7 +88,6 @@ def eval_runtime(model, args):
     criterion = torch.nn.CrossEntropyLoss()
     avg_time = 0
     overall_time = 0
-    run_time = 0
     for i in range(10):
         print('Test {}: '.format(i+1), end='', flush=True)
         for images, target in val_loader:

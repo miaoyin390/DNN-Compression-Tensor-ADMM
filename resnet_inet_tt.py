@@ -126,6 +126,32 @@ class TTBasicBlock(nn.Module):
 
         return out
 
+    def forward_flops(self, x, name):
+        identity = x
+        tt_flops = 0
+
+        if isinstance(self.conv1, TTConv2dM):
+            out, flops = self.conv1.forward_flops(x, name+'conv1:')
+            tt_flops += flops
+        else:
+            out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        if isinstance(self.conv2, TTConv2dM):
+            out, flops = self.conv2.forward_flops(out, name+'conv2:')
+            tt_flops += flops
+        else:
+            out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+        return out, tt_flops
+
 
 class TTBottleneck(nn.Module):
     # Bottleneck in torchvision places the stride for downsampling at 3x3 convolution(self.conv2)
@@ -316,6 +342,7 @@ class TTResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def _forward_impl(self, x: Tensor) -> Tensor:
+        assert x.shape[0] == 1
         # See note [TorchScript super()]
         x = self.conv1(x)
         x = self.bn1(x)
@@ -335,6 +362,35 @@ class TTResNet(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
+
+    def forward_flops(self, x):
+        tt_flops = 0
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        for i, layer in enumerate(self.layer1):
+            name = 'layer1.{}.'.format(str(i))
+            x, flops = layer.forward_flops(x, name)
+            tt_flops += flops
+        for i, layer in enumerate(self.layer2):
+            name = 'layer2.{}.'.format(str(i))
+            x, flops = layer.forward_flops(x, name)
+            tt_flops += flops
+        for i, layer in enumerate(self.layer3):
+            name = 'layer3.{}.'.format(str(i))
+            x, flops = layer.forward_flops(x, name)
+            tt_flops += flops
+        for i, layer in enumerate(self.layer4):
+            name = 'layer4.{}.'.format(str(i))
+            x, flops = layer.forward_flops(x, name)
+            tt_flops += flops
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+
+        return x, tt_flops
 
 
 def _tt_resnet(
@@ -370,6 +426,19 @@ def ttr_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 @register_model
+def ttm_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TTConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
 def ttr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         dense_dict = torch.load(path, map_location='cpu')
@@ -396,17 +465,18 @@ def ttr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    baseline = 'resnet50'
-    model_name = 'ttr_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, '3', tt_type='general')
+    baseline = 'resnet18'
+    model_name = 'ttm_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, '2', tt_type='special')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     tk_params = 0
     for name, p in model.named_parameters():
         if 'conv' in name or 'fc' in name:
             print(name, p.shape)
             tk_params += int(np.prod(p.shape))
-    print('Compressed # parameters: {}'.format(tk_params))
 
+    x = torch.randn(1, 3, 224, 224)
+    _, tt_flops = model.forward_flops(x)
     base_params = 0
     model = timm.create_model(baseline)
     for name, p in model.named_parameters():
@@ -414,4 +484,8 @@ if __name__ == '__main__':
             # print(name, p.shape)
             base_params += int(np.prod(p.shape))
     print('Baseline # parameters: {}'.format(base_params))
-    print('Compression ratio: {}'.format(base_params/tk_params))
+    print('Compressed # parameters: {}'.format(tk_params))
+    print('Compression ratio: {:.3f}'.format(base_params/tk_params))
+    print('Compressed # FLOPs: {:.2f}M'.format(tt_flops))
+
+

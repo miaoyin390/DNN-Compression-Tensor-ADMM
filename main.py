@@ -39,7 +39,7 @@ def main(args):
 
     hp_dict = utils.get_hp_dict(args.model, args.ratio, tt_type=args.tt_type)
 
-    if 'deit' in args.model:
+    if 'deit' in args.model or 'vit' in args.model:
         model_dict = dict(drop_rate=args.drop,
                           drop_path_rate=args.drop_path,
                           drop_block_rate=None

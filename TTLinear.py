@@ -12,7 +12,7 @@ from torch import Tensor
 from torch.nn import Parameter, ParameterList
 import torch.nn.functional as F
 from torch.nn import init
-from torch.nn.modules import Module
+from torch.nn.modules import Module, Linear
 from torch.nn.modules.utils import _single, _pair, _triple, _reverse_repeat_tuple
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
@@ -28,6 +28,7 @@ class TTLinearM(Module):
 
         self.tt_shapes = list(tt_shapes)
         self.tt_order = len(self.tt_shapes)
+
         channels = 1
         for i in range(len(self.tt_shapes)):
             channels *= self.tt_shapes[i]
@@ -40,6 +41,7 @@ class TTLinearM(Module):
 
         assert in_features == int(np.prod(self.in_tt_shapes))
         assert out_features == int(np.prod(self.out_tt_shapes))
+
 
         self.in_features = in_features
         self.out_features = out_features
@@ -72,7 +74,7 @@ class TTLinearM(Module):
             init.xavier_uniform_(self.tt_cores[i])
 
     def forward(self, x):
-        out_shape = x.shape
+        out_shape = list(x.shape)
         out_shape[-1] = self.out_features
         out = x
         for i in range(self.in_tt_order-1, -1, -1):
