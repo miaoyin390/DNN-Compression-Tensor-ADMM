@@ -159,7 +159,7 @@ def ttm_vit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=N
     if decompose:
         if path is None:
             dense_dict = timm.create_model('vit_small_patch16_224', pretrained=True, **kwargs).state_dict()
-        elif path.startwith('http'):
+        elif path.startswith('http'):
             dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
         else:
             dense_dict = torch.load(path, map_location='cpu')
@@ -179,7 +179,7 @@ def ttr_vit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=N
     if decompose:
         if path is None:
             dense_dict = timm.create_model('vit_small_patch16_224', pretrained=True, **kwargs).state_dict()
-        elif path.startwith('http'):
+        elif path.startswith('http'):
             dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
         else:
             dense_dict = torch.load(path, map_location='cpu')
@@ -199,7 +199,7 @@ def ttm_deit_tiny_patch16_224(hp_dict, pretrained=False, decompose=False, path=N
     if decompose:
         if path is None:
             dense_dict = timm.create_model('deit_tiny_patch16_224', pretrained=True, **kwargs).state_dict()
-        elif path.startwith('http'):
+        elif path.startswith('http'):
             dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
         else:
             dense_dict = torch.load(path, map_location='cpu')
@@ -219,7 +219,7 @@ def ttr_deit_tiny_patch16_224(hp_dict, pretrained=False, decompose=False, path=N
     if decompose:
         if path is None:
             dense_dict = timm.create_model('deit_tiny_patch16_224', pretrained=True, **kwargs).state_dict()
-        elif path.startwith('http'):
+        elif path.startswith('http'):
             dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
         else:
             dense_dict = torch.load(path, map_location='cpu')
@@ -239,7 +239,7 @@ def ttm_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=
     if decompose:
         if path is None:
             dense_dict = timm.create_model('deit_small_patch16_224', pretrained=True).state_dict()
-        elif path.startwith('http'):
+        elif path.startswith('http'):
             dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
         else:
             dense_dict = torch.load(path, map_location='cpu')
@@ -259,7 +259,7 @@ def ttr_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=
     if decompose:
         if path is None:
             dense_dict = timm.create_model('deit_small_patch16_224', pretrained=True).state_dict()
-        elif path.startwith('http'):
+        elif path.startswith('http'):
             dense_dict = torch.hub.load_state_dict_from_url(url=path, map_location="cpu", check_hash=True)
         else:
             dense_dict = torch.load(path, map_location='cpu')
