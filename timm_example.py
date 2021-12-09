@@ -7,4 +7,9 @@ import torch
 import timm
 
 
-model = timm.create_model('resnet18', pretrained=True)
+def foo(x):
+    x += 1
+
+x = 1
+foo(x)
+print(x)
