@@ -98,7 +98,7 @@ class TKBasicBlock(nn.Module):
         out = F.relu(self.bn1(out))
 
         print('>{}:\t'.format(name + 'conv2'), end='', flush=True)
-        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+        if isinstance(self.conv2, (TKConv2dC, TKConv2dM, TKConv2dR)):
             out, flops1, flops2 = self.conv2.forward_flops(out)
             base_flops += flops1
             compr_flops += flops2

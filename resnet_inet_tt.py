@@ -132,7 +132,7 @@ class TTBasicBlock(nn.Module):
         compr_flops = 0
 
         print('>{}:'.format(name + 'conv1'))
-        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+        if isinstance(self.conv1, (TTConv2dM, TTConv2dR)):
             out, flops1, flops2 = self.conv1.forward_flops(x)
             base_flops += flops1
             compr_flops += flops2
@@ -144,7 +144,7 @@ class TTBasicBlock(nn.Module):
         out = self.relu(out)
 
         print('>{}:'.format(name + 'conv2'))
-        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+        if isinstance(self.conv2, (TTConv2dM, TTConv2dR)):
             out, flops1, flops2 = self.conv2.forward_flops(out)
             base_flops += flops1
             compr_flops += flops2
