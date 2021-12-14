@@ -16,6 +16,7 @@ from timm.models.registry import register_model
 from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 import utils
+import resnet_cifar
 
 
 def _weights_init(m):
@@ -81,6 +82,37 @@ class TKBasicBlock(nn.Module):
         out = F.relu(out)
         return out
 
+    def forward_flops(self, x, name):
+        base_flops = 0
+        compr_flops = 0
+
+        print('>{}:\t'.format(name + 'conv1'), end='', flush=True)
+        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv1.forward_flops(x)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv1(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+        out = F.relu(self.bn1(out))
+
+        print('>{}:\t'.format(name + 'conv2'), end='', flush=True)
+        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv2.forward_flops(out)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv2(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+        out = self.bn2(out)
+
+        out += self.shortcut(x)
+        out = F.relu(out)
+
+        return out, base_flops, compr_flops
+
 
 class TKResNet(nn.Module):
     def __init__(self, num_blocks, num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC],
@@ -119,6 +151,30 @@ class TKResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
+    def forward_flops(self, x):
+        base_flops = 0
+        compr_flops = 0
+        out = F.relu(self.bn1(self.conv1(x)))
+        for i, layer in enumerate(self.layer1):
+            name = 'layer1.{}.'.format(str(i))
+            out, flops1, flops2 = layer.forward_flops(out, name)
+            base_flops += flops1
+            compr_flops += flops2
+        for i, layer in enumerate(self.layer2):
+            name = 'layer2.{}.'.format(str(i))
+            out, flops1, flops2 = layer.forward_flops(out, name)
+            base_flops += flops1
+            compr_flops += flops2
+        for i, layer in enumerate(self.layer3):
+            name = 'layer3.{}.'.format(str(i))
+            out, flops1, flops2 = layer.forward_flops(out, name)
+            base_flops += flops1
+            compr_flops += flops2
+        out = F.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        return out, base_flops, compr_flops
 
 
 def _tk_resnet(num_blocks, num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC], hp_dict=None,
@@ -234,12 +290,29 @@ def tkc_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    model_name = 'tkr_resnet32'
-    hp_dict = utils.get_hp_dict(model_name, '1.5')
+    baseline = 'resnet32'
+    model_name = 'tkc_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, ratio='2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
-    n_params = 0
+    compr_params = 0
     for name, p in model.named_parameters():
+        # if 'conv' in name or 'fc' in name:
+            # print(name, p.shape)
         if p.requires_grad:
-            print(name, p.shape)
-            n_params += p.numel()
-    print('Total # parameters: {}'.format(n_params))
+            compr_params += int(np.prod(p.shape))
+
+    x = torch.randn(1, 3, 32, 32)
+    _, base_flops, compr_flops = model.forward_flops(x)
+    base_params = 0
+    model = timm.create_model(baseline)
+    for name, p in model.named_parameters():
+        # if 'conv' in name or 'fc' in name:
+            # print(name, p.shape)
+        if p.requires_grad:
+            base_params += int(np.prod(p.shape))
+    print('Baseline # parameters: {}'.format(base_params))
+    print('Compressed # parameters: {}'.format(compr_params))
+    print('Compression ratio: {:.3f}'.format(base_params/compr_params))
+    print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
+    print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
+    print('FLOPs ratio: {:.3f}'.format(base_flops/compr_flops))

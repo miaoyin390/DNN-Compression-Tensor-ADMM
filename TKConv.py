@@ -34,6 +34,7 @@ class TKConv2dC(Module):
         (out_rank, in_rank) = ranks
         self.in_rank = ranks[1]
         self.out_rank = ranks[0]
+        self.kernel_size = kernel_size
 
         # A pointwise convolution that reduces the channels from S to R3
         self.first_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=in_rank,
@@ -79,6 +80,29 @@ class TKConv2dC(Module):
         out = self.core_conv(out)
         out = self.last_conv(out)
         return out
+
+    def forward_flops(self, x):
+        compr_params = (self.first_conv.weight.numel() + self.core_conv.weight.numel() +
+                        self.last_conv.weight.numel()) / 1000
+        compr_flops = 0
+        out = self.first_conv(x)
+        _, _, height_, width_ = out.shape
+        compr_flops += height_ * width_ * self.first_conv.weight.numel() / 1000 / 1000
+        out = self.core_conv(out)
+        _, _, height_, width_ = out.shape
+        compr_flops += height_ * width_ * self.core_conv.weight.numel() / 1000 / 1000
+        out = self.last_conv(out)
+        _, _, height_, width_ = out.shape
+        compr_flops += height_ * width_ * self.last_conv.weight.numel() / 1000 / 1000
+
+        base_params = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels / 1000
+        base_flops = height_ * width_ * self.kernel_size * self.kernel_size * \
+                     self.in_channels * self.out_channels / 1000 / 1000
+
+        print('baseline # params: {:.2f}K\t compressed # params: {:.2f}K\t '
+              'baseline # flops: {:.2f}M\t compressed # flops: {:.2f}M'.format(base_params, compr_params, base_flops, compr_flops))
+
+        return out, base_flops, compr_flops
 
 
 class TKConv2dM(Module):

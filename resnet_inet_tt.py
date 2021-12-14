@@ -128,21 +128,30 @@ class TTBasicBlock(nn.Module):
 
     def forward_flops(self, x, name):
         identity = x
-        tt_flops = 0
+        base_flops = 0
+        compr_flops = 0
 
-        if isinstance(self.conv1, TTConv2dM):
-            out, flops = self.conv1.forward_flops(x, name+'conv1:')
-            tt_flops += flops
+        print('>{}:'.format(name + 'conv1'))
+        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv1.forward_flops(x)
+            base_flops += flops1
+            compr_flops += flops2
         else:
             out = self.conv1(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
         out = self.bn1(out)
         out = self.relu(out)
 
-        if isinstance(self.conv2, TTConv2dM):
-            out, flops = self.conv2.forward_flops(out, name+'conv2:')
-            tt_flops += flops
+        print('>{}:'.format(name + 'conv2'))
+        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv2.forward_flops(out)
+            base_flops += flops1
+            compr_flops += flops2
         else:
-            out = self.conv2(out)
+            out = self.conv2(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
         out = self.bn2(out)
 
         if self.downsample is not None:
@@ -150,7 +159,7 @@ class TTBasicBlock(nn.Module):
 
         out += identity
         out = self.relu(out)
-        return out, tt_flops
+        return out, base_flops, compr_flops
 
 
 class TTBottleneck(nn.Module):
@@ -364,33 +373,39 @@ class TTResNet(nn.Module):
         return self._forward_impl(x)
 
     def forward_flops(self, x):
-        tt_flops = 0
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
+        base_flops = 0
+        compr_flops = 0
+
         for i, layer in enumerate(self.layer1):
             name = 'layer1.{}.'.format(str(i))
-            x, flops = layer.forward_flops(x, name)
-            tt_flops += flops
+            x, flops1, flops2 = layer.forward_flops(x, name)
+            base_flops += flops1
+            compr_flops += flops2
         for i, layer in enumerate(self.layer2):
             name = 'layer2.{}.'.format(str(i))
-            x, flops = layer.forward_flops(x, name)
-            tt_flops += flops
+            x, flops1, flops2 = layer.forward_flops(x, name)
+            base_flops += flops1
+            compr_flops += flops2
         for i, layer in enumerate(self.layer3):
             name = 'layer3.{}.'.format(str(i))
-            x, flops = layer.forward_flops(x, name)
-            tt_flops += flops
+            x, flops1, flops2 = layer.forward_flops(x, name)
+            base_flops += flops1
+            compr_flops += flops2
         for i, layer in enumerate(self.layer4):
             name = 'layer4.{}.'.format(str(i))
-            x, flops = layer.forward_flops(x, name)
-            tt_flops += flops
+            x, flops1, flops2 = layer.forward_flops(x, name)
+            base_flops += flops1
+            compr_flops += flops2
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)
 
-        return x, tt_flops
+        return x, compr_flops
 
 
 def _tt_resnet(
@@ -469,23 +484,27 @@ if __name__ == '__main__':
     model_name = 'ttm_' + baseline
     hp_dict = utils.get_hp_dict(model_name, '2', tt_type='special')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
-    tk_params = 0
+    compr_params = 0
     for name, p in model.named_parameters():
-        if 'conv' in name or 'fc' in name:
-            print(name, p.shape)
-            tk_params += int(np.prod(p.shape))
+        # if 'conv' in name or 'fc' in name:
+            # print(name, p.shape)
+        if p.requires_grad:
+            compr_params += int(np.prod(p.shape))
 
-    x = torch.randn(1, 3, 224, 224)
-    _, tt_flops = model.forward_flops(x)
+    x = torch.randn(1, 3, 32, 32)
+    _, base_flops, compr_flops = model.forward_flops(x)
     base_params = 0
     model = timm.create_model(baseline)
     for name, p in model.named_parameters():
-        if 'conv' in name or 'fc' in name:
+        # if 'conv' in name or 'fc' in name:
             # print(name, p.shape)
+        if p.requires_grad:
             base_params += int(np.prod(p.shape))
     print('Baseline # parameters: {}'.format(base_params))
-    print('Compressed # parameters: {}'.format(tk_params))
-    print('Compression ratio: {:.3f}'.format(base_params/tk_params))
-    print('Compressed # FLOPs: {:.2f}M'.format(tt_flops))
+    print('Compressed # parameters: {}'.format(compr_params))
+    print('Compression ratio: {:.3f}'.format(base_params/compr_params))
+    print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
+    print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
+    print('FLOPs ratio: {:.3f}'.format(base_flops/compr_flops))
 
 

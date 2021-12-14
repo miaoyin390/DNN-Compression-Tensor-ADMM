@@ -137,8 +137,7 @@ class TTConv2dM(Module):
 
         return out
 
-    def forward_flops(self, x, name):
-        print('>{}'.format(name))
+    def forward_flops(self, x):
         tt_params = 0
         tt_flops = 0
         batch_size, channels, height, width = x.shape
@@ -179,7 +178,7 @@ class TTConv2dM(Module):
         print('baseline # params: {:.2f}K, tt # params: {:.2f}K'.format(base_params/1000, tt_params/1000))
         print('baseline # flops: {:.2f}M, tt # flops: {:.2f}M'.format(base_flops, tt_flops))
 
-        return out, tt_flops
+        return out, base_flops, tt_flops
 
 
 class TTConv2dR(Module):
