@@ -27,7 +27,7 @@ from datasets import get_train_loader, get_val_loader, get_data_loader
 from losses import DistillationLoss
 import utils
 from utils import get_hp_dict
-from utils import normal_adjust_lr
+# from utils import normal_adjust_lr
 from admm import ADMM
 import orthogonal
 
@@ -45,7 +45,6 @@ def evaluate(data_loader, model, device, print_freq=100):
     for images, target in metric_logger.log_every(data_loader, print_freq, header):
         images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
-        current_time = time.time()
         # compute output
         with torch.cuda.amp.autocast():
             output = model(images)
@@ -97,7 +96,7 @@ def eval_runtime(model, args):
             current_time = time.time()
             # with torch.cuda.amp.autocast():
             output = model(images)
-            loss = criterion(output, target)
+            _ = criterion(output, target)
             run_time = (time.time() - current_time) * 1000 / len(images)
             if args.device == 'cpu':
                 print(run_time)

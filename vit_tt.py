@@ -275,7 +275,7 @@ def ttr_deit_small_patch16_224(hp_dict, pretrained=False, decompose=False, path=
 
 
 if __name__ == '__main__':
-    baseline = 'deit_tiny_patch16_224'
+    baseline = 'deit_small_patch16_224'
     model_name = 'ttm_' + baseline
     hp_dict = utils.get_hp_dict(model_name, '2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
