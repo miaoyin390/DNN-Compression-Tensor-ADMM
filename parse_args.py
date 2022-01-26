@@ -130,7 +130,7 @@ def parse_args():
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
     parser.add_argument('--runtime', action='store_true', help='Perform runtime test only')
     parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
-    parser.add_argument('--num-workers', default=12, type=int)
+    parser.add_argument('--num-workers', default=4, type=int)
     parser.add_argument('--pin-memory', action='store_true', default=True,
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
     parser.add_argument('--no-pin-mem', action='store_false', dest='pin_memory', default=False,

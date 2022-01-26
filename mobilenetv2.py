@@ -219,6 +219,7 @@ if __name__ == '__main__':
     params = 0
     for n, p in model.named_parameters():
         if p.requires_grad:
+            print(n, p.shape)
             params += p.numel()
     print(params)
 
