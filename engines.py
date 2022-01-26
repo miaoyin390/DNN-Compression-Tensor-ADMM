@@ -333,9 +333,11 @@ def train(model, args):
             utils.save_on_master(model_state_dict, model_path)
 
         test_stats = evaluate(data_loader_val, model, device)
-        max_acc1 = max(max_acc1, test_stats["acc1"])
-        max_acc5 = max(max_acc5, test_stats["acc5"])
-        print('After {} epochs, max acc1: {:.3f}%, max acc5: {:.3f}%'.format(epoch, max_acc1, max_acc5))
+        acc1 = test_stats['acc1']
+        acc5 = test_stats['acc5']
+        max_acc1 = max(max_acc1, acc1)
+        max_acc5 = max(max_acc5, acc5)
+        print('Epoch [{}/{}], max acc1: {:.3f}%, max acc5: {:.3f}%'.format(epoch+1, args.epochs, max_acc1, max_acc5))
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                      **{f'test_{k}': v for k, v in test_stats.items()},
