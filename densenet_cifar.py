@@ -1,4 +1,6 @@
 import math
+
+import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -129,7 +131,7 @@ class DenseNet(nn.Module):
         return self.fc(out)
 
 
-def _densenet(num_layers, grow_rate=12, num_classes=10, **kwargs):
+def _densenet(num_layers, grow_rate=16, num_classes=10, **kwargs):
     if 'num_classes' in kwargs.keys():
         num_classes = kwargs.get('num_classes')
     return DenseNet(num_layers, num_classes, grow_rate, **kwargs)
@@ -137,7 +139,7 @@ def _densenet(num_layers, grow_rate=12, num_classes=10, **kwargs):
 
 @register_model
 def densenet40(pretrained=False, path=None, **kwargs):
-    model = _densenet(40, bottleneck=False, **kwargs)
+    model = _densenet(40, grow_rate=16, bottleneck=False, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
@@ -146,7 +148,7 @@ def densenet40(pretrained=False, path=None, **kwargs):
 
 @register_model
 def densenet100(pretrained=False, path=None, **kwargs):
-    model = _densenet(100, bottleneck=False, **kwargs)
+    model = _densenet(100, grow_rate=12, bottleneck=False, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
@@ -154,7 +156,7 @@ def densenet100(pretrained=False, path=None, **kwargs):
 
 
 if __name__ == '__main__':
-    model = densenet40(grow_rate=16)
+    model = timm.create_model('densenet40')
     x = torch.randn([1, 3, 32, 32])
     y = model(x)
     n_params = 0
