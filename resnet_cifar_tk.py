@@ -82,6 +82,19 @@ class TKBasicBlock(nn.Module):
         out = F.relu(out)
         return out
 
+    def forward_features(self, x, name, features):
+        cur_name = name + 'conv1'
+        out, f = self.conv1.forward_features(x)
+        features[cur_name] = f
+        out = F.relu(self.bn1(out))
+        cur_name = name + 'conv2'
+        out, f = self.conv2.forward_features(out)
+        features[cur_name] = f
+        out = self.bn2(out)
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
     def forward_flops(self, x, name):
         base_flops = 0
         compr_flops = 0
@@ -152,6 +165,27 @@ class TKResNet(nn.Module):
         out = self.linear(out)
         return out
 
+    def forward_features(self, x):
+        features = {}
+        out = F.relu(self.bn1(self.conv1(x)))
+        for i, layer in enumerate(self.layer1):
+            name = 'layer1.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        for i, layer in enumerate(self.layer2):
+            name = 'layer2.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        for i, layer in enumerate(self.layer3):
+            name = 'layer3.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        out = F.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+
+        return out, features
+
     def forward_flops(self, x):
         base_flops = 0
         compr_flops = 0
@@ -201,12 +235,6 @@ def tkr_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     model = _tk_resnet([5, 5, 5], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
-        # test influence of Gaussian noise
-        # for key in state_dict.keys():
-        #     if 'conv' in key:
-        #         shape = state_dict[key].shape
-        #         watt = torch.mean(state_dict[key] ** 2)
-        #         state_dict[key].add_(torch.from_numpy(np.random.normal(0, np.sqrt(0.01*watt), shape)))
         model.load_state_dict(state_dict)
     return model
 

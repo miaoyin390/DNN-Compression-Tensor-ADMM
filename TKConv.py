@@ -81,6 +81,16 @@ class TKConv2dC(Module):
         out = self.last_conv(out)
         return out
 
+    def forward_features(self, x):
+        features = []
+        out = self.first_conv(x)
+        features.append(out)
+        out = self.core_conv(out)
+        features.append(out)
+        out = self.last_conv(out)
+        features.append(out)
+        return out, features
+
     def forward_flops(self, x):
         compr_params = (self.first_conv.weight.numel() + self.core_conv.weight.numel() +
                         self.last_conv.weight.numel()) / 1000

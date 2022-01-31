@@ -404,9 +404,9 @@ def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    baseline = 'resnet50'
-    model_name = 'tkc_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, '10')
+    baseline = 'resnet18'
+    model_name = 'tkr_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, '2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     tk_params = 0
     for name, p in model.named_parameters():
@@ -419,7 +419,7 @@ if __name__ == '__main__':
     model = timm.create_model(baseline)
     for name, p in model.named_parameters():
         if 'conv' in name or 'fc' in name:
-            # print(name, p.shape)
+            print(name, p.shape)
             base_params += int(np.prod(p.shape))
     print('Baseline # parameters: {}'.format(base_params))
     print('Compression ratio: {}'.format(base_params/tk_params))

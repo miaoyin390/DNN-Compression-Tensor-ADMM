@@ -59,6 +59,19 @@ class BasicBlock(nn.Module):
         out = F.relu(out)
         return out
 
+    def forward_features(self, x, name, features):
+        cur_name = name + 'conv1'
+        out = self.conv1(x)
+        features[cur_name] = out
+        out = F.relu(self.bn1(out))
+        cur_name = name + 'conv2'
+        out = self.conv2(out)
+        features[cur_name] = out
+        out = self.bn2(out)
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
 
 class ResNet(nn.Module):
     def __init__(self, num_blocks, num_classes=10):
@@ -92,6 +105,27 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
+    def forward_features(self, x):
+        features = {}
+        out = F.relu(self.bn1(self.conv1(x)))
+        for i, layer in enumerate(self.layer1):
+            name = 'layer1.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        for i, layer in enumerate(self.layer2):
+            name = 'layer2.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        for i, layer in enumerate(self.layer3):
+            name = 'layer3.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        out = F.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+
+        return out, features
 
 
 def _resnet(num_blocks, num_classes=10, **kwargs):

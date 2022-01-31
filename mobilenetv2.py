@@ -6,7 +6,6 @@
 import timm
 from timm.models import register_model
 from torch import nn
-from torchvision.models.utils import load_state_dict_from_url
 
 
 __all__ = ['MobileNetV2', 'mobilenetv2']
