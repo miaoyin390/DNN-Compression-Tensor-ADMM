@@ -12,6 +12,7 @@ from torchvision.models.utils import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 from TTConv import TTConv2dM, TTConv2dR
+from TKConv import TKConv2dM, TKConv2dR, TKConv2dC
 from timm.models.registry import register_model
 import timm
 
@@ -29,26 +30,21 @@ def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
-def conv3x3_tt(in_planes: int, out_planes: int, tt_shapes: list, ranks: list, stride: int = 1, groups: int = 1,
-               dilation: int = 1, conv: Type[Union[TTConv2dR, TTConv2dM]] = TTConv2dR, dense_w: Optional = None):
+def tt_conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1,
+               conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
+               hp_dict=None, name=None, dense_w: Optional = None):
     """3x3 convolution with padding"""
-    if dense_w is None:
-        return conv(in_planes, out_planes, tt_shapes, ranks, kernel_size=3, stride=stride,
-                    padding=dilation, groups=groups, bias=False, dilation=dilation)
-    else:
-        return conv(in_planes, out_planes, tt_shapes, ranks, kernel_size=3, stride=stride,
-                    padding=dilation, groups=groups, bias=False, dilation=dilation,
-                    from_dense=True, dense_w=dense_w)
+    return conv(in_planes, out_planes, kernel_size=3, stride=stride,
+                padding=dilation, groups=groups, bias=False, dilation=dilation,
+                hp_dict=hp_dict, name=name, dense_w=dense_w)
 
 
-def conv1x1_tt(in_planes: int, out_planes: int, tt_shapes:list, ranks: list, stride: int = 1,
-               conv: Type[Union[TTConv2dR, TTConv2dM]] = TTConv2dR, dense_w: Optional = None):
+def tt_conv1x1(in_planes: int, out_planes: int, stride: int = 1,
+               conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
+               hp_dict=None, name=None, dense_w: Optional = None):
     """1x1 convolution"""
-    if dense_w is None:
-        return conv(in_planes, out_planes, tt_shapes, ranks, kernel_size=1, stride=stride, bias=False)
-    else:
-        return conv(in_planes, out_planes, tt_shapes, ranks, kernel_size=1, stride=stride, bias=False,
-                    from_dense=True, dense_w=dense_w)
+    return conv(in_planes, out_planes, kernel_size=1, stride=stride, bias=False,
+                hp_dict=hp_dict, name=name, dense_w=dense_w)
 
 
 class TTBasicBlock(nn.Module):
@@ -66,11 +62,11 @@ class TTBasicBlock(nn.Module):
             norm_layer: Optional[Callable[..., nn.Module]] = None,
             stage: int = 1,
             id: int = 0,
-            conv: Type[Union[TTConv2dR, TTConv2dM]] = TTConv2dR,
+            conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
             hp_dict: Optional = None,
             dense_dict: Optional = None
     ) -> None:
-        super().__init__()
+        super(TTBasicBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if groups != 1 or base_width != 64:
@@ -80,28 +76,20 @@ class TTBasicBlock(nn.Module):
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv1'
         w_name = layer + '.weight'
-        if w_name in hp_dict.ranks.keys():
-            if dense_dict is None:
-                self.conv1 = conv3x3_tt(inplanes, planes, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], stride, conv=conv)
-            else:
-                self.conv1 = conv3x3_tt(inplanes, planes, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], stride, conv=conv,
-                                        dense_w=dense_dict[w_name])
+        if w_name in hp_dict.ranks:
+            self.conv1 = tt_conv3x3(inplanes, planes, stride, conv=conv,
+                                    hp_dict=hp_dict, name=w_name,
+                                    dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv2'
         w_name = layer + '.weight'
-        if w_name in hp_dict.ranks.keys():
-            if dense_dict is None:
-                self.conv2 = conv3x3_tt(planes, planes, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], conv=conv)
-            else:
-                self.conv2 = conv3x3_tt(planes, planes, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], conv=conv,
-                                        dense_w=dense_dict[w_name])
+        if w_name in hp_dict.ranks:
+            self.conv2 = tt_conv3x3(planes, planes, conv=conv,
+                                    hp_dict=hp_dict, name=w_name,
+                                    dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv2 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
@@ -132,7 +120,7 @@ class TTBasicBlock(nn.Module):
         compr_flops = 0
 
         print('>{}:'.format(name + 'conv1'))
-        if isinstance(self.conv1, (TTConv2dM, TTConv2dR)):
+        if isinstance(self.conv1, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
             out, flops1, flops2 = self.conv1.forward_flops(x)
             base_flops += flops1
             compr_flops += flops2
@@ -144,7 +132,7 @@ class TTBasicBlock(nn.Module):
         out = self.relu(out)
 
         print('>{}:'.format(name + 'conv2'))
-        if isinstance(self.conv2, (TTConv2dM, TTConv2dR)):
+        if isinstance(self.conv2, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
             out, flops1, flops2 = self.conv2.forward_flops(out)
             base_flops += flops1
             compr_flops += flops2
@@ -183,50 +171,40 @@ class TTBottleneck(nn.Module):
             norm_layer: Optional[Callable[..., nn.Module]] = None,
             stage: int = 1,
             id: int = 0,
-            conv: Type[Union[TTConv2dR, TTConv2dM]] = TTConv2dR,
+            conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
             hp_dict: Optional = None,
             dense_dict: Optional = None
     ) -> None:
-        super().__init__()
+        super(TTBasicBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv1'
         w_name = layer + '.weight'
-        if w_name in hp_dict.ranks.keys():
-            if dense_dict is None:
-                self.conv1 = conv1x1_tt(inplanes, width, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], conv=conv)
-            else:
-                self.conv1 = conv1x1_tt(inplanes, width, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], conv=conv,
-                                        dense_w=dense_dict[w_name])
+        if w_name in hp_dict.ranks:
+            self.conv1 = tt_conv1x1(inplanes, width, conv=conv,
+                                    hp_dict=hp_dict, name=w_name,
+                                    dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv1 = conv1x1(inplanes, width)
         self.bn1 = norm_layer(width)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv2'
         w_name = layer + '.weight'
-        if w_name in hp_dict.ranks.keys():
-            if dense_dict is None:
-                self.conv2 = conv3x3_tt(width, width, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
-                                        stride, groups, dilation, conv=conv)
-            else:
-                self.conv2 = conv3x3_tt(width, width, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
-                                        stride, groups, dilation, conv=conv, dense_w=dense_dict[w_name])
+        if w_name in hp_dict.ranks:
+            self.conv2 = tt_conv3x3(width, width, stride, groups, dilation,
+                                    conv=conv, hp_dict=hp_dict, name=w_name,
+                                    dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv2 = conv3x3(width, width, stride, groups, dilation)
 
         self.bn2 = norm_layer(width)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv3'
         w_name = layer + '.weight'
-        if w_name in hp_dict.ranks.keys():
-            if dense_dict is None:
-                self.conv3 = conv1x1_tt(width, planes * self.expansion, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], conv=conv)
-            else:
-                self.conv3 = conv1x1_tt(width, planes * self.expansion, hp_dict.tt_shapes[w_name],
-                                        hp_dict.ranks[w_name], conv=conv, dense_w=dense_dict[w_name])
+        if w_name in hp_dict.ranks:
+            self.conv3 = tt_conv1x1(width, planes * self.expansion,
+                                    conv=conv, hp_dict=hp_dict, name=w_name,
+                                    dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
@@ -269,11 +247,11 @@ class TTResNet(nn.Module):
             width_per_group: int = 64,
             replace_stride_with_dilation: Optional[List[bool]] = None,
             norm_layer: Optional[Callable[..., nn.Module]] = None,
-            conv: Type[Union[TTConv2dR, TTConv2dM]] = TTConv2dR,
+            conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
             hp_dict: Optional = None,
             dense_dict: Optional = None
     ) -> None:
-        super().__init__()
+        super(TTResNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -324,7 +302,7 @@ class TTResNet(nn.Module):
 
     def _make_layer(self, block: Type[Union[TTBasicBlock, TTBottleneck]], planes: int, blocks: int,
                     stride: int = 1, dilate: bool = False, stage: int = 1,
-                    conv: Type[Union[TTConv2dR, TTConv2dM]] = TTConv2dR,
+                    conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
                     hp_dict: Optional = None, dense_dict: Optional = None) -> nn.Sequential:
         norm_layer = self._norm_layer
         downsample = None
@@ -405,13 +383,13 @@ class TTResNet(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc(x)
 
-        return x, compr_flops
+        return x, compr_flops, base_flops
 
 
 def _tt_resnet(
         block: Type[Union[TTBasicBlock, TTBottleneck]],
         layers: List[int],
-        conv: Type[Union[TTConv2dR, TTConv2dM]],
+        conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]],
         hp_dict,
         dense_dict: Optional = None,
         **kwargs: Any
@@ -479,6 +457,58 @@ def ttr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     return model
 
 
+@register_model
+def tkr_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBasicBlock, [3, 4, 6, 3], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBottleneck, [3, 4, 6, 3], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBottleneck, [3, 4, 6, 3], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == '__main__':
     baseline = 'resnet18'
     model_name = 'ttm_' + baseline
@@ -487,24 +517,23 @@ if __name__ == '__main__':
     compr_params = 0
     for name, p in model.named_parameters():
         # if 'conv' in name or 'fc' in name:
-            # print(name, p.shape)
+        # print(name, p.shape)
         if p.requires_grad:
             compr_params += int(np.prod(p.shape))
 
-    x = torch.randn(1, 3, 32, 32)
-    _, base_flops, compr_flops = model.forward_flops(x)
+    x = torch.randn(1, 3, 224, 224)
+    _ = model(x)
+    _, compr_flops, base_flops = model.forward_flops(x)
     base_params = 0
     model = timm.create_model(baseline)
     for name, p in model.named_parameters():
         # if 'conv' in name or 'fc' in name:
-            # print(name, p.shape)
+        # print(name, p.shape)
         if p.requires_grad:
             base_params += int(np.prod(p.shape))
     print('Baseline # parameters: {}'.format(base_params))
     print('Compressed # parameters: {}'.format(compr_params))
-    print('Compression ratio: {:.3f}'.format(base_params/compr_params))
+    print('Compression ratio: {:.3f}'.format(base_params / compr_params))
     print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
     print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
-    print('FLOPs ratio: {:.3f}'.format(base_flops/compr_flops))
-
-
+    print('FLOPs ratio: {:.3f}'.format(base_flops / compr_flops))

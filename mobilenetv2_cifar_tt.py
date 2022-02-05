@@ -7,23 +7,24 @@ import numpy as np
 from timm.models.registry import register_model
 
 from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
+from TTConv import TTConv2dR, TTConv2dM
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 import utils
 import mobilenetv2_cifar
 
 
-class TKBaseBlock(nn.Module):
+class TTBaseBlock(nn.Module):
     alpha = 1
 
     def __init__(self, input_channel, output_channel, t=6, downsample=False,
-                 conv=Union[TKConv2dR, TKConv2dM, TKConv2dC],
+                 conv=Union[TKConv2dR, TKConv2dM, TKConv2dC, TTConv2dR, TTConv2dM],
                  id=None, hp_dict=None, dense_dict=None):
         """
             t:  expansion factor, t*input_channel is channel of expansion layer
             alpha:  width multiplier, to get thinner models
             rho:    resolution multiplier, to get reduced representation
         """
-        super(TKBaseBlock, self).__init__()
+        super(TTBaseBlock, self).__init__()
         self.stride = 2 if downsample else 1
         self.downsample = downsample
         self.shortcut = (not downsample) and (input_channel == output_channel)
@@ -37,8 +38,8 @@ class TKBaseBlock(nn.Module):
         # 1x1   point wise conv
         w_name = 'bottlenecks.' + str(id) + '.conv1.weight'
         if w_name in hp_dict.ranks:
-            self.conv1 = conv(input_channel, c, hp_dict.ranks[w_name], kernel_size=1, bias=False,
-                              from_dense=False if dense_dict is None else True,
+            self.conv1 = conv(input_channel, c, kernel_size=1, bias=False,
+                              hp_dict=hp_dict, name=w_name,
                               dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv1 = nn.Conv2d(input_channel, c, kernel_size=1, bias=False)
@@ -49,8 +50,8 @@ class TKBaseBlock(nn.Module):
         # 1x1   point wise conv
         w_name = 'bottlenecks.' + str(id) + '.conv3.weight'
         if w_name in hp_dict.ranks:
-            self.conv3 = conv(c, output_channel, hp_dict.ranks[w_name], kernel_size=1, bias=False,
-                              from_dense=False if dense_dict is None else True,
+            self.conv3 = conv(c, output_channel, kernel_size=1, bias=False,
+                              hp_dict=hp_dict, name=w_name,
                               dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv3 = nn.Conv2d(c, output_channel, kernel_size=1, bias=False)
@@ -68,10 +69,10 @@ class TKBaseBlock(nn.Module):
         return x
 
 
-class TKMobileNetV2(nn.Module):
-    def __init__(self, output_size=10, alpha=1, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC],
+class TTMobileNetV2(nn.Module):
+    def __init__(self, output_size=10, alpha=1, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC, TTConv2dR, TTConv2dM],
                  hp_dict=None, dense_dict=None):
-        super(TKMobileNetV2, self).__init__()
+        super(TTMobileNetV2, self).__init__()
         self.output_size = output_size
 
         # first conv layer
@@ -79,31 +80,31 @@ class TKMobileNetV2(nn.Module):
         self.bn0 = nn.BatchNorm2d(int(32 * alpha))
 
         # build bottlenecks
-        TKBaseBlock.alpha = alpha
+        TTBaseBlock.alpha = alpha
         self.bottlenecks = nn.Sequential(
-            TKBaseBlock(32, 16, t=1, downsample=False, conv=conv, id=0, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(16, 24, downsample=False, conv=conv, id=1, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(24, 24, conv=conv, id=2, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(24, 32, downsample=False, conv=conv, id=3, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(32, 32, conv=conv, id=4, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(32, 32, conv=conv, id=5, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(32, 64, downsample=True, conv=conv, id=6, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(64, 64, conv=conv, id=7, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(64, 64, conv=conv, id=8, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(64, 64, conv=conv, id=9, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(64, 96, downsample=False, conv=conv, id=10, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(96, 96, conv=conv, id=11, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(96, 96, conv=conv, id=12, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(96, 160, downsample=True, conv=conv, id=13, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(160, 160, conv=conv, id=14, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(160, 160, conv=conv, id=15, hp_dict=hp_dict, dense_dict=dense_dict),
-            TKBaseBlock(160, 320, downsample=False, conv=conv, id=16, hp_dict=hp_dict, dense_dict=dense_dict))
+            TTBaseBlock(32, 16, t=1, downsample=False, conv=conv, id=0, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(16, 24, downsample=False, conv=conv, id=1, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(24, 24, conv=conv, id=2, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(24, 32, downsample=False, conv=conv, id=3, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(32, 32, conv=conv, id=4, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(32, 32, conv=conv, id=5, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(32, 64, downsample=True, conv=conv, id=6, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(64, 64, conv=conv, id=7, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(64, 64, conv=conv, id=8, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(64, 64, conv=conv, id=9, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(64, 96, downsample=False, conv=conv, id=10, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(96, 96, conv=conv, id=11, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(96, 96, conv=conv, id=12, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(96, 160, downsample=True, conv=conv, id=13, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(160, 160, conv=conv, id=14, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(160, 160, conv=conv, id=15, hp_dict=hp_dict, dense_dict=dense_dict),
+            TTBaseBlock(160, 320, downsample=False, conv=conv, id=16, hp_dict=hp_dict, dense_dict=dense_dict))
 
         # last conv layers and fc layer
         w_name = 'conv1.weight'
         if w_name in hp_dict.ranks:
-            self.conv1 = conv(int(320*alpha), 1280, hp_dict.ranks[w_name], kernel_size=1, bias=False,
-                              from_dense=False if dense_dict is None else True,
+            self.conv1 = conv(int(320*alpha), 1280, kernel_size=1, bias=False,
+                              hp_dict=hp_dict, name=w_name,
                               dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
             self.conv1 = nn.Conv2d(int(320 * alpha), 1280, kernel_size=1, bias=False)
@@ -145,11 +146,11 @@ class TKMobileNetV2(nn.Module):
         return x
 
 
-def _tk_mobilenetv2_cifar(num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC],
+def _tt_mobilenetv2_cifar(num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC],
                           hp_dict=None, dense_dict=None, **kwargs):
     if 'num_classes' in kwargs.keys():
         num_classes = kwargs.get('num_classes')
-    model = TKMobileNetV2(output_size=num_classes, conv=conv, hp_dict=hp_dict, dense_dict=dense_dict)
+    model = TTMobileNetV2(output_size=num_classes, conv=conv, hp_dict=hp_dict, dense_dict=dense_dict)
     if dense_dict is not None:
         tk_dict = model.state_dict()
         for key in tk_dict.keys():
@@ -166,7 +167,7 @@ def tkr_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None,
         dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
-    model = _tk_mobilenetv2_cifar(conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    model = _tt_mobilenetv2_cifar(conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
     if pretrained:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)

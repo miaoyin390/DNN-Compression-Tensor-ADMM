@@ -23,50 +23,51 @@ tl.set_backend('pytorch')
 
 
 class TKConv2dC(Module):
-    def __init__(self, in_channels, out_channels, ranks,
+    def __init__(self, in_channels, out_channels,
                  kernel_size, stride=1, padding=0, dilation=1, groups=1,
                  bias=True, padding_mode='zeros',
-                 from_dense=False, dense_w=None, dense_b=None):
+                 hp_dict=None, name=str,
+                 dense_w=None, dense_b=None):
         super().__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        (out_rank, in_rank) = ranks
-        self.in_rank = ranks[1]
-        self.out_rank = ranks[0]
+        self.ranks = list(hp_dict.ranks[name])
+        self.in_rank = self.ranks[1]
+        self.out_rank = self.ranks[0]
         self.kernel_size = kernel_size
 
         # A pointwise convolution that reduces the channels from S to R3
-        self.first_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=in_rank,
+        self.first_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=self.in_rank,
                                           kernel_size=1, stride=1, padding=0, dilation=dilation,
                                           groups=groups, bias=False, padding_mode=padding_mode)
 
         # A regular 2D convolution layer with R3 input channels
         # and R3 output channels
-        self.core_conv = torch.nn.Conv2d(in_channels=in_rank, out_channels=out_rank,
+        self.core_conv = torch.nn.Conv2d(in_channels=self.in_rank, out_channels=self.out_rank,
                                          kernel_size=kernel_size, stride=stride, padding=padding,
                                          dilation=dilation, groups=groups, bias=False,
                                          padding_mode=padding_mode)
 
         # A pointwise convolution that increases the channels from R4 to T
-        self.last_conv = torch.nn.Conv2d(in_channels=out_rank, out_channels=out_channels,
+        self.last_conv = torch.nn.Conv2d(in_channels=self.out_rank, out_channels=out_channels,
                                          kernel_size=1, stride=1, padding=0, dilation=dilation,
                                          bias=bias, padding_mode=padding_mode)
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if dense_w is not None:
             core_tensor, [last_factor, first_factor] = partial_tucker(dense_w, modes=[0, 1],
-                                                                      rank=[out_rank, in_rank], init='svd')
+                                                                      rank=self.ranks, init='svd')
             self.first_conv.weight.data = torch.transpose(first_factor, 1, 0).unsqueeze(-1).unsqueeze(-1)
             self.last_conv.weight.data = last_factor.unsqueeze(-1).unsqueeze(-1)
             self.core_conv.weight.data = core_tensor
 
-            if bias:
-                self.bias.data = dense_b
         else:
             self.reset_parameters()
 
@@ -116,38 +117,38 @@ class TKConv2dC(Module):
 
 
 class TKConv2dM(Module):
-    def __init__(self, in_channels, out_channels, ranks,
+    def __init__(self, in_channels, out_channels,
                  kernel_size, stride=1, padding=0, dilation=1, groups=1,
                  bias=True, padding_mode='zeros',
-                 from_dense=False, dense_w=None, dense_b=None):
+                 hp_dict=None, name=str,
+                 dense_w=None, dense_b=None):
         super().__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        (out_rank, in_rank) = ranks
-        self.in_rank = ranks[1]
-        self.out_rank = ranks[0]
+        self.ranks = list(hp_dict.ranks[name])
+        self.in_rank = self.ranks[1]
+        self.out_rank = self.ranks[0]
 
-        self.first_factor = Parameter(torch.Tensor(in_rank, in_channels))
-        self.core_conv = torch.nn.Conv2d(in_channels=in_rank, out_channels=out_rank, kernel_size=kernel_size,
+        self.first_factor = Parameter(torch.Tensor(self.in_rank, in_channels))
+        self.core_conv = torch.nn.Conv2d(in_channels=self.in_rank, out_channels=self.out_rank, kernel_size=kernel_size,
                                          stride=stride, padding=padding, dilation=dilation,
                                          groups=groups, bias=False, padding_mode=padding_mode)
-        self.last_factor = Parameter(torch.Tensor(out_channels, out_rank))
+        self.last_factor = Parameter(torch.Tensor(out_channels, self.out_rank))
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if dense_w is not None:
             core_tensor, (last_factor, first_factor) = partial_tucker(dense_w, modes=(0, 1),
-                                                                      rank=(out_rank, in_rank), init='svd')
+                                                                      rank=(self.out_rank, self.in_rank), init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
             self.core_conv.weight.data = core_tensor
-
-            if bias:
-                self.bias.data = dense_b
         else:
             self.reset_parameters()
 
@@ -177,7 +178,6 @@ class TKConv2dR(Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 ranks: list,
                  kernel_size: _size_2_t,
                  stride: _size_2_t = 1,
                  padding: _size_2_t = 0,
@@ -185,7 +185,8 @@ class TKConv2dR(Module):
                  groups: int = 1,
                  bias: bool = True,
                  padding_mode: str = 'zeros',
-                 from_dense: bool = False,
+                 hp_dict=None,
+                 name=str,
                  dense_w: Tensor = None,
                  dense_b: Tensor = None,
                  ):
@@ -198,9 +199,9 @@ class TKConv2dR(Module):
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        (out_rank, in_rank) = ranks
-        self.in_rank = ranks[1]
-        self.out_rank = ranks[0]
+        self.ranks = list(hp_dict.ranks[name])
+        self.in_rank = self.ranks[1]
+        self.out_rank = self.ranks[0]
 
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
@@ -229,24 +230,24 @@ class TKConv2dR(Module):
 
         self.filter_dim = int(self.kernel_shape[2] * self.kernel_shape[3])
 
-        self.first_factor = Parameter(torch.Tensor(in_rank, in_channels))
-        self.core_tensor = Parameter(torch.Tensor(out_rank, in_rank, self.kernel_shape[2], self.kernel_shape[3]))
-        self.last_factor = Parameter(torch.Tensor(out_channels, out_rank))
+        self.first_factor = Parameter(torch.Tensor(self.in_rank, in_channels))
+        self.core_tensor = Parameter(torch.Tensor(self.out_rank, self.in_rank, self.kernel_shape[2], self.kernel_shape[3]))
+        self.last_factor = Parameter(torch.Tensor(out_channels, self.out_rank))
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if dense_w is not None:
             core_tensor, (last_factor, first_factor) = partial_tucker(dense_w, modes=(0, 1),
-                                                                      rank=(out_rank, in_rank), init='svd')
+                                                                      rank=(self.out_rank, self.in_rank), init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
             self.core_tensor.data = core_tensor
 
-            if bias:
-                self.bias.data = dense_b
         else:
             self.reset_parameters()
 

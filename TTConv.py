@@ -21,17 +21,17 @@ from ttd import ten2tt
 
 
 class TTConv2dM(Module):
-    def __init__(self, in_channels, out_channels, tt_shapes, tt_ranks,
+    def __init__(self, in_channels, out_channels,
                  kernel_size, stride=1, padding=0, dilation=1, groups=1,
-                 bias=True, padding_mode='zeros',
-                 from_dense=False, dense_w=None, dense_b=None):
+                 bias=True, padding_mode='zeros', hp_dict=None, name=str,
+                 dense_w=None, dense_b=None):
         # kernel_size = _pair(kernel_size)
         # stride = _pair(stride)
         # padding = _pair(padding)
         # dilation = _pair(dilation)
         super().__init__()
 
-        self.tt_shapes = list(tt_shapes)
+        self.tt_shapes = list(hp_dict.tt_shapes[name])
         self.tt_order = len(self.tt_shapes)
         channels = 1
         for i in range(len(self.tt_shapes)):
@@ -49,7 +49,7 @@ class TTConv2dM(Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
-        self.tt_ranks = list(tt_ranks)
+        self.tt_ranks = list(hp_dict.ranks[name])
         self.out_tt_ranks = self.tt_ranks[:self.out_tt_order + 1]
         self.in_tt_ranks = self.tt_ranks[self.out_tt_order + 1:]
 
@@ -71,10 +71,12 @@ class TTConv2dM(Module):
 
         if bias:
             self.bias = Parameter(torch.zeros(self.out_channels))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense or dense_w is not None:
+        if dense_w is not None:
             w = dense_w.detach().cpu().numpy()
             kernel_shape = w.shape
             w = np.reshape(w, [self.out_channels, self.in_channels, -1])
@@ -89,9 +91,6 @@ class TTConv2dM(Module):
                         self.out_tt_ranks[-1], self.in_tt_ranks[0], kernel_shape[2], kernel_shape[3])
                 else:
                     self.in_tt_cores[i - self.out_tt_order - 1].data = torch.from_numpy(tt_cores[i])
-
-            if bias:
-                self.bias.data = dense_b
 
         else:
             self.reset_parameters()
@@ -175,7 +174,7 @@ class TTConv2dM(Module):
         tt_params += self.core_conv.weight.numel()
         base_params = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels
 
-        print('baseline # params: {:.2f}K, tt # params: {:.2f}K'.format(base_params/1000, tt_params/1000))
+        print('baseline # params: {:.2f}K, tt # params: {:.2f}K'.format(base_params / 1000, tt_params / 1000))
         print('baseline # flops: {:.2f}M, tt # flops: {:.2f}M'.format(base_flops, tt_flops))
 
         return out, base_flops, tt_flops
@@ -185,8 +184,6 @@ class TTConv2dR(Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 tt_shapes: list,
-                 tt_ranks: list,
                  kernel_size: _size_2_t,
                  stride: _size_2_t = 1,
                  padding: _size_2_t = 0,
@@ -194,7 +191,8 @@ class TTConv2dR(Module):
                  groups: int = 1,
                  bias: bool = True,
                  padding_mode: str = 'zeros',
-                 from_dense: bool = False,
+                 hp_dict=None,
+                 name=str,
                  dense_w: Tensor = None,
                  dense_b: Tensor = None,
                  ):
@@ -204,7 +202,7 @@ class TTConv2dR(Module):
         dilation = _pair(dilation)
         super(TTConv2dR, self).__init__()
 
-        self.tt_shapes = list(tt_shapes)
+        self.tt_shapes = list(hp_dict.tt_shapes[name])
         self.tt_order = len(self.tt_shapes)
         channels = 1
         for i in range(len(self.tt_shapes)):
@@ -217,7 +215,7 @@ class TTConv2dR(Module):
         self.in_tt_shapes = self.tt_shapes[self.out_tt_order + 1:]
 
         # output channels are in front of input channels in the original kernel
-        self.tt_ranks = list(tt_ranks)
+        self.tt_ranks = list(hp_dict.ranks[name])
         self.out_tt_ranks = self.tt_ranks[:self.out_tt_order + 1]
         self.in_tt_ranks = self.tt_ranks[self.out_tt_order + 1:]
 
@@ -263,10 +261,12 @@ class TTConv2dR(Module):
 
         if bias:
             self.bias = Parameter(torch.Tensor(self.out_channels))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense or dense_w is not None:
+        if dense_w is not None:
             w = dense_w.detach().cpu().numpy()
             w = np.reshape(w, [self.out_channels, self.in_channels, -1])
             tt_shapes = self.out_tt_shapes + [w.shape[-1]] + self.in_tt_shapes
@@ -279,9 +279,6 @@ class TTConv2dR(Module):
                     self.conv_core.data = torch.from_numpy(tt_cores[i])
                 else:
                     self.in_tt_cores[i - self.out_tt_order - 1].data = torch.from_numpy(tt_cores[i])
-
-            if bias:
-                self.bias.data = dense_b
 
         else:
             self.reset_parameters()

@@ -13,9 +13,11 @@ import timm
 from timm.models.registry import register_model
 
 from TTConv import TTConv2dM, TTConv2dR
+from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 import utils
+import resnet_cifar
 
 
 def _weights_init(m):
@@ -38,29 +40,27 @@ class TTBasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, in_planes, planes, stride=1, option='A',
-                 conv=Union[TTConv2dR, TTConv2dM],
+                 conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
                  stage=None, id=None, hp_dict=None, dense_dict=None):
         super().__init__()
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv1'
         w_name = layer + '.weight'
-        if dense_dict is None:
-            self.conv1 = conv(in_planes, planes, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
-                              3, stride=stride, padding=1, bias=False)
+        if w_name in hp_dict.ranks:
+            self.conv1 = conv(in_planes, planes, 3, stride=stride, padding=1, bias=False,
+                              hp_dict=hp_dict, name=w_name,
+                              dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
-            self.conv1 = conv(in_planes, planes, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
-                              3, stride=stride, padding=1, bias=False,
-                              from_dense=True, dense_w=dense_dict[w_name])
+            self.conv1 = nn.Conv2d(in_planes, planes, 3, stride=stride, padding=1, bias=False)
 
         self.bn1 = nn.BatchNorm2d(planes)
         layer = 'layer' + str(stage) + '.' + str(id) + '.conv2'
         w_name = layer + '.weight'
-        if dense_dict is None:
-            self.conv2 = conv(planes, planes, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
-                              3, stride=1, padding=1, bias=False)
+        if w_name in hp_dict.ranks:
+            self.conv2 = conv(planes, planes, 3, stride=1, padding=1, bias=False,
+                              hp_dict=hp_dict, name=w_name,
+                              dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
-            self.conv2 = conv(planes, planes, hp_dict.tt_shapes[w_name], hp_dict.ranks[w_name],
-                              3, stride=1, padding=1, bias=False,
-                              from_dense=True, dense_w=dense_dict[w_name])
+            self.conv2 = nn.Conv2d(planes, planes, 3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
@@ -85,9 +85,53 @@ class TTBasicBlock(nn.Module):
         out = F.relu(out)
         return out
 
+    def forward_features(self, x, name, features):
+        cur_name = name + 'conv1'
+        out, f = self.conv1.forward_features(x)
+        features[cur_name] = f
+        out = F.relu(self.bn1(out))
+        cur_name = name + 'conv2'
+        out, f = self.conv2.forward_features(out)
+        features[cur_name] = f
+        out = self.bn2(out)
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+    def forward_flops(self, x, name):
+        base_flops = 0
+        compr_flops = 0
+
+        print('>{}:\t'.format(name + 'conv1'), end='', flush=True)
+        if isinstance(self.conv1, (TKConv2dC, TKConv2dM, TKConv2dR, TTConv2dM, TTConv2dR)):
+            out, flops1, flops2 = self.conv1.forward_flops(x)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv1(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+        out = F.relu(self.bn1(out))
+
+        print('>{}:\t'.format(name + 'conv2'), end='', flush=True)
+        if isinstance(self.conv2, (TKConv2dC, TKConv2dM, TKConv2dR, TTConv2dM, TTConv2dR)):
+            out, flops1, flops2 = self.conv2.forward_flops(out)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv2(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+        out = self.bn2(out)
+
+        out += self.shortcut(x)
+        out = F.relu(out)
+
+        return out, compr_flops, base_flops
+
 
 class TTResNet(nn.Module):
-    def __init__(self, num_blocks, num_classes=10, conv=Union[TTConv2dR, TTConv2dM],
+    def __init__(self, num_blocks, num_classes=10, conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
                  hp_dict=None, dense_dict=None):
         super().__init__()
         self.in_planes = 16
@@ -124,8 +168,55 @@ class TTResNet(nn.Module):
         out = self.linear(out)
         return out
 
+    def forward_features(self, x):
+        features = {}
+        out = F.relu(self.bn1(self.conv1(x)))
+        for i, layer in enumerate(self.layer1):
+            name = 'layer1.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
 
-def _tt_resnet(num_blocks, num_classes=10, conv=Union[TTConv2dR, TTConv2dM], hp_dict=None, dense_dict=None, **kwargs):
+        for i, layer in enumerate(self.layer2):
+            name = 'layer2.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        for i, layer in enumerate(self.layer3):
+            name = 'layer3.{}.'.format(str(i))
+            out = layer.forward_features(out, name, features)
+
+        out = F.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+
+        return out, features
+
+    def forward_flops(self, x):
+        base_flops = 0
+        compr_flops = 0
+        out = F.relu(self.bn1(self.conv1(x)))
+        for i, layer in enumerate(self.layer1):
+            name = 'layer1.{}.'.format(str(i))
+            out, flops1, flops2 = layer.forward_flops(out, name)
+            base_flops += flops1
+            compr_flops += flops2
+        for i, layer in enumerate(self.layer2):
+            name = 'layer2.{}.'.format(str(i))
+            out, flops1, flops2 = layer.forward_flops(out, name)
+            base_flops += flops1
+            compr_flops += flops2
+        for i, layer in enumerate(self.layer3):
+            name = 'layer3.{}.'.format(str(i))
+            out, flops1, flops2 = layer.forward_flops(out, name)
+            base_flops += flops1
+            compr_flops += flops2
+        out = F.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        return out, base_flops, compr_flops
+
+
+def _tt_resnet(num_blocks, num_classes=10,
+               conv=Union[TTConv2dR, TTConv2dM, TKConv2dC, TKConv2dR, TKConv2dM],
+               hp_dict=None, dense_dict=None, **kwargs):
     if 'num_classes' in kwargs.keys():
         num_classes = kwargs.get('num_classes')
     model = TTResNet(num_blocks, num_classes=num_classes, conv=conv, hp_dict=hp_dict, dense_dict=dense_dict)
@@ -204,13 +295,131 @@ def ttm_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     return model
 
 
+@register_model
+def tkr_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([5, 5, 5], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkr_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([3, 3, 3], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkr_resnet56(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([9, 9, 9], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkm_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([5, 5, 5], conv=TKConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkm_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([3, 3, 3], conv=TKConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([5, 5, 5], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([3, 3, 3], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == '__main__':
-    model_name = 'ttr_resnet56'
-    hp_dict = utils.get_hp_dict(model_name, '3')
+    # model_name = 'ttm_resnet32'
+    # hp_dict = utils.get_hp_dict(model_name, '3')
+    # model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
+    # n_params = 0
+    # for name, p in model.named_parameters():
+    #     if 'conv' in name or 'linear' in name:
+    #         print(name, p.shape)
+    #         n_params += p.numel()
+    # print('Total # parameters: {}'.format(n_params))
+
+    baseline = 'resnet32'
+    model_name = 'tkc_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, ratio='3')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
-    n_params = 0
+    compr_params = 0
     for name, p in model.named_parameters():
-        if 'conv' in name or 'linear' in name:
-            print(name, p.shape)
-            n_params += p.numel()
-    print('Total # parameters: {}'.format(n_params))
+        # if 'conv' in name or 'fc' in name:
+            # print(name, p.shape)
+        if p.requires_grad:
+            compr_params += int(np.prod(p.shape))
+
+    x = torch.randn(1, 3, 32, 32)
+    _, compr_flops, base_flops = model.forward_flops(x)
+    base_params = 0
+    model = timm.create_model(baseline)
+    for name, p in model.named_parameters():
+        # if 'conv' in name or 'fc' in name:
+            # print(name, p.shape)
+        if p.requires_grad:
+            base_params += int(np.prod(p.shape))
+    print('Baseline # parameters: {}'.format(base_params))
+    print('Compressed # parameters: {}'.format(compr_params))
+    print('Compression ratio: {:.3f}'.format(base_params/compr_params))
+    print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
+    print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
+    print('FLOPs ratio: {:.3f}'.format(base_flops/compr_flops))

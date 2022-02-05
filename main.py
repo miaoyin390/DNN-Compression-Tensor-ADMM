@@ -21,9 +21,9 @@ import resnet_cifar_tt
 import resnet_inet_tk
 import resnet_inet_tt
 import mobilenetv2_cifar
-import mobilenetv2_cifar_tk
+import mobilenetv2_cifar_tt
 import densenet_cifar
-import densenet_cifar_tk
+import densenet_cifar_tt
 
 
 def main(args):
