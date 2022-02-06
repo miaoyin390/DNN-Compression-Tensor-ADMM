@@ -15,6 +15,7 @@ from torchvision.models.utils import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 from TTConv import TTConv2dM, TTConv2dR
+from TKConv import TKConv2dR, TKConv2dM, TKConv2dC
 from mobilenetv2 import mobilenetv2
 from timm.models.registry import register_model
 
@@ -59,14 +60,15 @@ class ConvBNReLU(nn.Sequential):
 
 
 class TTConvBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, tt_shapes, tt_ranks, kernel_size=3, stride=1, groups=1, norm_layer=None,
-                 conv=Union[TTConv2dR, TTConv2dM], dense_w=None):
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1, norm_layer=None,
+                 conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
+                 hp_dict=None, name=None, dense_w=None):
         padding = (kernel_size - 1) // 2
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         super(TTConvBNReLU, self).__init__(
-            conv(in_planes, out_planes, tt_shapes, tt_ranks, kernel_size, stride, padding, groups=groups, bias=False,
-                 from_dense=False if dense_w is None else True, dense_w=dense_w),
+            conv(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False,
+                 hp_dict=hp_dict, name=name, dense_w=dense_w),
             norm_layer(out_planes),
             nn.ReLU6(inplace=True)
         )
@@ -74,7 +76,8 @@ class TTConvBNReLU(nn.Sequential):
 
 class TTInvertedResidual(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, id=None,
-                 conv=Union[TTConv2dR, TTConv2dM], hp_dict=None, dense_dict=None):
+                 conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
+                 hp_dict=None, dense_dict=None):
         super(TTInvertedResidual, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
@@ -87,13 +90,14 @@ class TTInvertedResidual(nn.Module):
 
         layers = []
         w0_name = 'features.' + str(id) + '.conv.0.0.weight'
-        w1_name = 'features.' + str(id) + '.conv.1.0.weight'
+        # dw layer too compact to compress
+        # w1_name = 'features.' + str(id) + '.conv.1.0.weight'
         w2_name = 'features.' + str(id) + '.conv.2.weight'
         if expand_ratio != 1:
             # pw
-            if w0_name in hp_dict.ranks.keys():
-                layers.append(TTConvBNReLU(inp, hidden_dim, hp_dict.tt_shapes[w0_name], hp_dict.ranks[w0_name],
-                                           kernel_size=1, norm_layer=norm_layer, conv=conv,
+            if w0_name in hp_dict.ranks:
+                layers.append(TTConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
+                                           conv=conv, hp_dict=hp_dict, name=w0_name,
                                            dense_w=None if dense_dict is None else dense_dict[w0_name]))
             else:
                 layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
@@ -101,8 +105,8 @@ class TTInvertedResidual(nn.Module):
             # dw
             ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
             # pw-linear
-            conv(hidden_dim, oup, hp_dict.tt_shapes[w2_name], hp_dict.ranks[w2_name], 1, 1, 0, bias=False, dense_w=None
-            if dense_dict is None else dense_dict[w2_name]) if w2_name in hp_dict.ranks.keys()
+            conv(hidden_dim, oup, 1, 1, 0, bias=False, hp_dict=hp_dict, name=w2_name,
+                 dense_w=None if dense_dict is None else dense_dict[w2_name]) if w2_name in hp_dict.ranks
             else nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
             norm_layer(oup),
         ])
@@ -123,7 +127,7 @@ class TTMobileNetV2(nn.Module):
                  round_nearest=8,
                  block=None,
                  norm_layer=None,
-                 conv=Union[TTConv2dR, TTConv2dM],
+                 conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
                  hp_dict=None,
                  dense_dict=None,
                  ):
@@ -184,10 +188,10 @@ class TTMobileNetV2(nn.Module):
                 input_channel = output_channel
         # building last several layers
         w_name = 'features.18.0.weight'
-        if w_name in hp_dict.ranks.keys():
-            features.append(TTConvBNReLU(input_channel, self.last_channel, hp_dict.tt_shapes[w_name],
-                                         hp_dict.ranks[w_name], kernel_size=1, norm_layer=norm_layer,
-                                         conv=conv, dense_w=None if dense_dict is None else dense_dict[w_name]))
+        if w_name in hp_dict.ranks:
+            features.append(TTConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer,
+                                         conv=conv, hp_dict=hp_dict, name=w_name,
+                                         dense_w=None if dense_dict is None else dense_dict[w_name]))
         else:
             features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
         # make it nn.Sequential
