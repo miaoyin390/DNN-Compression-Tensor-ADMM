@@ -21,12 +21,12 @@ from ttd import ten2tt
 
 
 class TTLinearM(Module):
-    def __init__(self, in_features: int, out_features: int, tt_shapes: list,
-                 tt_ranks: list, bias: bool = True,
-                 from_dense: bool = False, dense_w: Tensor = None, dense_b: Tensor = None):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True,
+                 hp_dict: Optional = None, name: str = None,
+                 dense_w: Tensor = None, dense_b: Tensor = None):
         super().__init__()
 
-        self.tt_shapes = list(tt_shapes)
+        self.tt_shapes = list(hp_dict.tt_shapes[name])
         self.tt_order = len(self.tt_shapes)
 
         channels = 1
@@ -46,25 +46,24 @@ class TTLinearM(Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.tt_ranks = list(tt_ranks)
+        self.tt_ranks = list(hp_dict.ranks[name])
 
         self.tt_cores = ParameterList([Parameter(torch.Tensor(
             self.tt_ranks[i], self.tt_shapes[i], self.tt_ranks[i+1])) for i in range(self.tt_order)])
 
         if bias:
             self.bias = Parameter(torch.Tensor(self.out_features))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if dense_w is not None:
             w = dense_w.detach().cpu().numpy()
             tt_cores = ten2tt(w, self.tt_shapes, self.tt_ranks)
 
             for i in range(len(tt_cores)):
                 self.tt_cores[i].data = torch.from_numpy(tt_cores[i])
-
-            if bias:
-                self.bias.data = dense_b
 
         else:
             self.reset_parameters()
@@ -95,12 +94,12 @@ class TTLinearM(Module):
 
 
 class TTLinearR(Module):
-    def __init__(self, in_features: int, out_features: int, tt_shapes: list,
-                 tt_ranks: list, bias: bool = True,
-                 from_dense: bool = False, dense_w: Tensor = None, dense_b: Tensor = None):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True,
+                 hp_dict: Optional = None, name: str = None,
+                 dense_w: Tensor = None, dense_b: Tensor = None):
         super().__init__()
 
-        self.tt_shapes = list(tt_shapes)
+        self.tt_shapes = list(hp_dict.tt_shapes[name])
         self.tt_order = len(self.tt_shapes)
         channels = 1
         for i in range(len(self.tt_shapes)):
@@ -118,25 +117,24 @@ class TTLinearR(Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.tt_ranks = list(tt_ranks)
+        self.tt_ranks = list(hp_dict.ranks[name])
 
         self.tt_cores = ParameterList([Parameter(torch.Tensor(
             self.tt_ranks[i], self.tt_shapes[i], self.tt_ranks[i+1])) for i in range(self.tt_order)])
 
         if bias:
             self.bias = Parameter(torch.Tensor(self.out_features))
+            if dense_b is not None:
+                self.bias.data = dense_b
         else:
             self.register_parameter('bias', None)
 
-        if from_dense:
+        if dense_w is not None:
             w = dense_w.detach().cpu().numpy()
             tt_cores = ten2tt(w, self.tt_shapes, self.tt_ranks)
 
             for i in range(len(tt_cores)):
                 self.tt_cores[i].data = torch.from_numpy(tt_cores[i])
-
-            if bias:
-                self.bias.data = dense_b
 
         else:
             self.reset_parameters()
