@@ -185,8 +185,8 @@ class TKConv2dR(Module):
                  groups: int = 1,
                  bias: bool = True,
                  padding_mode: str = 'zeros',
-                 hp_dict=None,
-                 name=str,
+                 hp_dict: Optional = None,
+                 name: str = None,
                  dense_w: Tensor = None,
                  dense_b: Tensor = None,
                  ):
@@ -262,8 +262,7 @@ class TKConv2dR(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def _recover_weight(self):
-        w = tl.tucker_to_tensor((self.core_tensor, (self.last_factor, self.first_factor.t())))
-        return w
+        return tl.tucker_to_tensor((self.core_tensor, (self.last_factor, self.first_factor.t())))
 
     def _conv_forward(self, x, weight):
         if self.padding_mode != 'zeros':
