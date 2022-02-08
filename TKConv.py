@@ -41,6 +41,8 @@ class TKConv2dC(Module):
                  ):
         if groups != 1:
             raise ValueError("groups must be 1 in this mode")
+        if padding_mode != 'zeros':
+            raise ValueError("padding_mode must be zero in this mode")
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
@@ -62,24 +64,8 @@ class TKConv2dC(Module):
         self.groups = groups
         self.padding_mode = padding_mode
 
-        # A pointwise convolution that reduces the channels from S to R3
-        # self.first_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=self.in_rank,
-        #                                   kernel_size=1, stride=1, padding=0, dilation=dilation,
-        #                                   groups=groups, bias=False, padding_mode=padding_mode)
         self.first_kernel = Parameter(Tensor(self.in_rank, self.in_channels, 1, 1))
-
-        # A regular 2D convolution layer with R3 input channels
-        # and R3 output channels
-        # self.core_conv = torch.nn.Conv2d(in_channels=self.in_rank, out_channels=self.out_rank,
-        #                                  kernel_size=kernel_size, stride=stride, padding=padding,
-        #                                  dilation=dilation, groups=groups, bias=False,
-        #                                  padding_mode=padding_mode)
         self.core_kernel = Parameter(Tensor(self.out_rank, self.in_rank, *kernel_size))
-
-        # A pointwise convolution that increases the channels from R4 to T
-        # self.last_conv = torch.nn.Conv2d(in_channels=self.out_rank, out_channels=out_channels,
-        #                                  kernel_size=1, stride=1, padding=0, dilation=dilation,
-        #                                  bias=bias, padding_mode=padding_mode)
         self.last_kernel = Parameter(Tensor(self.out_channels, self.out_rank, 1, 1))
 
         if bias:
@@ -137,8 +123,8 @@ class TKConv2dC(Module):
         _, _, height_, width_ = out.shape
         compr_flops += height_ * width_ * self.last_kernel.numel() / 1000 / 1000
 
-        base_params = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels / 1000
-        base_flops = height_ * width_ * self.kernel_size * self.kernel_size * \
+        base_params = self.kernel_size[0] * self.kernel_size[1] * self.in_channels * self.out_channels / 1000
+        base_flops = height_ * width_ * self.kernel_size[0] * self.kernel_size[1] * \
                      self.in_channels * self.out_channels / 1000 / 1000
 
         print('baseline # params: {:.2f}K\t compressed # params: {:.2f}K\t '
@@ -155,16 +141,33 @@ class TKConv2dM(Module):
                  dense_w=None, dense_b=None):
         super().__init__()
 
+        if groups != 1:
+            raise ValueError("groups must be 1 in this mode")
+        if padding_mode != 'zeros':
+            raise ValueError("padding_mode must be zero in this mode")
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+
+        super(TKConv2dM, self).__init__()
+
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.ranks = list(hp_dict.ranks[name])
+        self.ranks = hp_dict.ranks[name]
         self.in_rank = self.ranks[1]
         self.out_rank = self.ranks[0]
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.transposed = False
+        self.output_padding = _pair(0)
+        self.groups = groups
+        self.padding_mode = padding_mode
 
         self.first_factor = Parameter(torch.Tensor(self.in_rank, in_channels))
-        self.core_conv = torch.nn.Conv2d(in_channels=self.in_rank, out_channels=self.out_rank, kernel_size=kernel_size,
-                                         stride=stride, padding=padding, dilation=dilation,
-                                         groups=groups, bias=False, padding_mode=padding_mode)
+        self.core_kernel = Parameter(Tensor(self.out_rank, self.in_rank, *self.kernel_size))
         self.last_factor = Parameter(torch.Tensor(out_channels, self.out_rank))
 
         if bias:
@@ -179,28 +182,31 @@ class TKConv2dM(Module):
                                                                       rank=(self.out_rank, self.in_rank), init='svd')
             self.first_factor.data = torch.transpose(first_factor, 1, 0)
             self.last_factor.data = last_factor
-            self.core_conv.weight.data = core_tensor
+            self.core_kernel.data = core_tensor
         else:
             self.reset_parameters()
 
     def reset_parameters(self):
         init.xavier_uniform_(self.first_factor)
         init.xavier_uniform_(self.last_factor)
-        self.core_conv.reset_parameters()
+        init.xavier_uniform_(self.core_kernel)
 
     def forward(self, x: Tensor) -> Tensor:
-        batch_size, channels, height, width = x.shape
-        out = self.first_factor.mm(x.permute(1, 0, 2, 3).reshape(channels, -1))
-        out = out.reshape(self.in_rank, batch_size, height, width).permute(1, 0, 2, 3)
+        # batch_size, channels, height, width = x.shape
+        # out = self.first_factor.mm(x.permute(1, 0, 2, 3).reshape(channels, -1))
+        # out = out.reshape(self.in_rank, batch_size, height, width).permute(1, 0, 2, 3)
 
-        out = self.core_conv(out)
-        _, _, height_, width_ = out.shape
+        out = F.linear(x.permute(0, 2, 3, 1), self.first_factor).permute(0, 3, 1, 2)
 
-        out = self.last_factor.mm(out.permute(1, 0, 2, 3).reshape(self.out_rank, -1))
-        out = out.reshape(self.out_channels, batch_size, height_, width_).permute(1, 0, 2, 3)
+        out = F.conv2d(out, self.core_kernel, None, self.stride,
+                       self.padding, self.dilation, self.groups)
+        out = F.linear(out.permute(0, 2, 3, 1), self.last_factor, self.bias).permute(0, 3, 1, 2)
+        # _, _, height_, width_ = out.shape
+        # out = self.last_factor.mm(out.permute(1, 0, 2, 3).reshape(self.out_rank, -1))
+        # out = out.reshape(self.out_channels, batch_size, height_, width_).permute(1, 0, 2, 3)
 
-        if self.bias is not None:
-            out += self.bias
+        # if self.bias is not None:
+        #     out += self.bias
 
         return out
 

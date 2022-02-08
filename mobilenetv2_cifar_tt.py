@@ -190,6 +190,19 @@ def tkc_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None,
 
 
 @register_model
+def tkm_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2_cifar(conv=TKConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
 def svdr_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         dense_dict = torch.load(path, map_location='cpu')
