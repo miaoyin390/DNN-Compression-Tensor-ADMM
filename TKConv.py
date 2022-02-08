@@ -18,41 +18,69 @@ from torch.nn.modules import Module
 from torch.nn.modules.utils import _single, _pair, _triple, _reverse_repeat_tuple
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
+from torch.nn import Conv2d
 
 tl.set_backend('pytorch')
 
 
 class TKConv2dC(Module):
-    def __init__(self, in_channels, out_channels,
-                 kernel_size, stride=1, padding=0, dilation=1, groups=1,
-                 bias=True, padding_mode='zeros',
-                 hp_dict=None, name=str,
-                 dense_w=None, dense_b=None):
-        super().__init__()
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: _size_2_t,
+                 stride: _size_2_t = 1,
+                 padding: _size_2_t = 0,
+                 dilation: _size_2_t = 1,
+                 groups: int = 1,
+                 bias: bool = True,
+                 padding_mode: str = 'zeros',
+                 hp_dict: Optional = None,
+                 name: str = None,
+                 dense_w: Tensor = None,
+                 dense_b: Tensor = None,
+                 ):
+        if groups != 1:
+            raise ValueError("groups must be 1 in this mode")
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+
+        super(TKConv2dC, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.ranks = list(hp_dict.ranks[name])
+        self.ranks = hp_dict.ranks[name]
         self.in_rank = self.ranks[1]
         self.out_rank = self.ranks[0]
         self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.transposed = False
+        self.output_padding = _pair(0)
+        self.groups = groups
+        self.padding_mode = padding_mode
 
         # A pointwise convolution that reduces the channels from S to R3
-        self.first_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=self.in_rank,
-                                          kernel_size=1, stride=1, padding=0, dilation=dilation,
-                                          groups=groups, bias=False, padding_mode=padding_mode)
+        # self.first_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=self.in_rank,
+        #                                   kernel_size=1, stride=1, padding=0, dilation=dilation,
+        #                                   groups=groups, bias=False, padding_mode=padding_mode)
+        self.first_kernel = Parameter(Tensor(self.in_rank, self.in_channels, 1, 1))
 
         # A regular 2D convolution layer with R3 input channels
         # and R3 output channels
-        self.core_conv = torch.nn.Conv2d(in_channels=self.in_rank, out_channels=self.out_rank,
-                                         kernel_size=kernel_size, stride=stride, padding=padding,
-                                         dilation=dilation, groups=groups, bias=False,
-                                         padding_mode=padding_mode)
+        # self.core_conv = torch.nn.Conv2d(in_channels=self.in_rank, out_channels=self.out_rank,
+        #                                  kernel_size=kernel_size, stride=stride, padding=padding,
+        #                                  dilation=dilation, groups=groups, bias=False,
+        #                                  padding_mode=padding_mode)
+        self.core_kernel = Parameter(Tensor(self.out_rank, self.in_rank, *kernel_size))
 
         # A pointwise convolution that increases the channels from R4 to T
-        self.last_conv = torch.nn.Conv2d(in_channels=self.out_rank, out_channels=out_channels,
-                                         kernel_size=1, stride=1, padding=0, dilation=dilation,
-                                         bias=bias, padding_mode=padding_mode)
+        # self.last_conv = torch.nn.Conv2d(in_channels=self.out_rank, out_channels=out_channels,
+        #                                  kernel_size=1, stride=1, padding=0, dilation=dilation,
+        #                                  bias=bias, padding_mode=padding_mode)
+        self.last_kernel = Parameter(Tensor(self.out_channels, self.out_rank, 1, 1))
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
@@ -64,22 +92,25 @@ class TKConv2dC(Module):
         if dense_w is not None:
             core_tensor, [last_factor, first_factor] = partial_tucker(dense_w, modes=[0, 1],
                                                                       rank=self.ranks, init='svd')
-            self.first_conv.weight.data = torch.transpose(first_factor, 1, 0).unsqueeze(-1).unsqueeze(-1)
-            self.last_conv.weight.data = last_factor.unsqueeze(-1).unsqueeze(-1)
-            self.core_conv.weight.data = core_tensor
+            self.first_kernel.data = torch.transpose(first_factor, 1, 0).unsqueeze(-1).unsqueeze(-1)
+            self.last_kernel.data = last_factor.unsqueeze(-1).unsqueeze(-1)
+            self.core_kernel.data = core_tensor
 
         else:
             self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        self.first_conv.reset_parameters()
-        self.core_conv.reset_parameters()
-        self.last_conv.reset_parameters()
+        init.xavier_uniform_(self.first_kernel)
+        init.xavier_uniform_(self.core_kernel)
+        init.xavier_uniform_(self.last_kernel)
 
     def forward(self, x):
-        out = self.first_conv(x)
-        out = self.core_conv(out)
-        out = self.last_conv(out)
+        out = F.conv2d(x, self.first_kernel, None, self.stride,
+                       self.padding, self.dilation, self.groups)
+        out = F.conv2d(out, self.core_kernel, None, self.stride,
+                       self.padding, self.dilation, self.groups)
+        out = F.conv2d(out, self.last_kernel, self.bias, self.stride,
+                       self.padding, self.dilation, self.groups)
         return out
 
     def forward_features(self, x):
@@ -93,18 +124,18 @@ class TKConv2dC(Module):
         return out, features
 
     def forward_flops(self, x):
-        compr_params = (self.first_conv.weight.numel() + self.core_conv.weight.numel() +
-                        self.last_conv.weight.numel()) / 1000
+        compr_params = (self.first_kernel.numel() + self.core_kernel.numel() +
+                        self.last_kernel.numel()) / 1000
         compr_flops = 0
         out = self.first_conv(x)
         _, _, height_, width_ = out.shape
-        compr_flops += height_ * width_ * self.first_conv.weight.numel() / 1000 / 1000
+        compr_flops += height_ * width_ * self.first_kernel.numel() / 1000 / 1000
         out = self.core_conv(out)
         _, _, height_, width_ = out.shape
-        compr_flops += height_ * width_ * self.core_conv.weight.numel() / 1000 / 1000
+        compr_flops += height_ * width_ * self.core_kernel.numel() / 1000 / 1000
         out = self.last_conv(out)
         _, _, height_, width_ = out.shape
-        compr_flops += height_ * width_ * self.last_conv.weight.numel() / 1000 / 1000
+        compr_flops += height_ * width_ * self.last_kernel.numel() / 1000 / 1000
 
         base_params = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels / 1000
         base_flops = height_ * width_ * self.kernel_size * self.kernel_size * \

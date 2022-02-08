@@ -8,6 +8,7 @@ from timm.models.registry import register_model
 
 from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
 from TTConv import TTConv2dR, TTConv2dM
+from SVDConv import SVDConv2dR, SVDConv2dC, SVDConv2dM
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 import utils
 import mobilenetv2_cifar
@@ -146,7 +147,8 @@ class TTMobileNetV2(nn.Module):
         return x
 
 
-def _tt_mobilenetv2_cifar(num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC],
+def _tt_mobilenetv2_cifar(num_classes=10, conv=Union[TKConv2dR, TKConv2dM, TKConv2dC,
+                                                     TTConv2dR, TTConv2dM, SVDConv2dR, SVDConv2dC, SVDConv2dM],
                           hp_dict=None, dense_dict=None, **kwargs):
     if 'num_classes' in kwargs.keys():
         num_classes = kwargs.get('num_classes')
@@ -174,11 +176,64 @@ def tkr_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None,
     return model
 
 
+@register_model
+def tkc_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2_cifar(conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def svdr_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2_cifar(conv=SVDConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def svdc_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2_cifar(conv=SVDConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def svdm_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2_cifar(conv=SVDConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == "__main__":
     baseline = 'mobilenetv2_cifar'
-    model_name = 'tkr_' + baseline
+    model_name = 'svdr_' + baseline
     hp_dict = utils.get_hp_dict(model_name, ratio='2')
-    model = timm.create_model(model_name, num_classes=10, hp_dict=hp_dict, decompose=None)
+    model = timm.create_model(model_name, num_classes=10, hp_dict=hp_dict, decompose=True,
+                              path='./saved_models/mobilenetv2_cifar_cifar10_0128-224831_model.pt')
     x = torch.randn([1, 3, 32, 32])
     y = model(x)
     n_params = 0

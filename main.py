@@ -13,12 +13,9 @@ from parse_args import parse_args
 
 import mobilenetv2
 import mobilenetv2_tt
-import vit_tk
 import vit_tt
 import resnet_cifar
-import resnet_cifar_tk
 import resnet_cifar_tt
-import resnet_inet_tk
 import resnet_inet_tt
 import mobilenetv2_cifar
 import mobilenetv2_cifar_tt

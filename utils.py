@@ -261,6 +261,8 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
         format = 'tk'
     elif 'tt' in model_name:
         format = 'tt'
+    elif 'svd' in model_name:
+        format = 'svd'
     else:
         pass
     if 'tk' in format and 'deit_tiny_patch16_224' in model_name:
@@ -349,6 +351,11 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
     elif 'tk' in format and 'mobilenetv2_cifar' in model_name:
         if ratio == '2':
             from hp_dicts.tk_mobilenetv2_cifar_hp import HyperParamsDictRatio2x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
+    elif 'svd' in format and 'mobilenetv2_cifar' in model_name:
+        if ratio == '2':
+            from hp_dicts.svd_mobilenetv2_cifar_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
     elif 'tk' in format and 'densenet40' in model_name:

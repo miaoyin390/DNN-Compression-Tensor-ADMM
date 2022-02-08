@@ -16,6 +16,7 @@ from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 from TTConv import TTConv2dM, TTConv2dR
 from TKConv import TKConv2dR, TKConv2dM, TKConv2dC
+from SVDConv import SVDConv2dC, SVDConv2dR, SVDConv2dM
 from mobilenetv2 import mobilenetv2
 from timm.models.registry import register_model
 
@@ -244,14 +245,18 @@ def _tt_mobilenetv2(conv, hp_dict, dense_dict=None, **kwargs):
 @register_model
 def ttr_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
-        dense_dict_ = mobilenetv2().state_dict()
-        for k1, k2 in zip(dense_dict_.keys(), dense_dict.keys()):
-            dense_dict_[k1].data = dense_dict[k2]
+        if pretrained:
+            dense_dict_ = timm.create_model('mobilenetv2_100', pretrained=True).state_dict()
+            dense_dict = mobilenetv2().state_dict()
+            for k1, k2 in zip(dense_dict.keys(), dense_dict_.keys()):
+                print(k1, k2)
+                dense_dict[k1].data = dense_dict_[k2]
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
-        dense_dict_ = None
-    model = _tt_mobilenetv2(conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict_, **kwargs)
-    if pretrained:
+        dense_dict = None
+    model = _tt_mobilenetv2(conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
 
