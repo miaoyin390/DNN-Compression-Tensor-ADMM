@@ -21,14 +21,29 @@ from ttd import ten2tt
 
 
 class TTConv2dM(Module):
-    def __init__(self, in_channels, out_channels,
-                 kernel_size, stride=1, padding=0, dilation=1, groups=1,
-                 bias=True, padding_mode='zeros', hp_dict=None, name=str,
-                 dense_w=None, dense_b=None):
-        # kernel_size = _pair(kernel_size)
-        # stride = _pair(stride)
-        # padding = _pair(padding)
-        # dilation = _pair(dilation)
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: _size_2_t,
+                 stride: _size_2_t = 1,
+                 padding: _size_2_t = 0,
+                 dilation: _size_2_t = 1,
+                 groups: int = 1,
+                 bias: bool = True,
+                 padding_mode: str = 'zeros',
+                 hp_dict: Optional = None,
+                 name: str = None,
+                 dense_w: Tensor = None,
+                 dense_b: Tensor = None,
+                 ):
+        if groups != 1:
+            raise ValueError("groups must be 1 in this mode")
+        if padding_mode != 'zeros':
+            raise ValueError("padding_mode must be zero in this mode")
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
         super().__init__()
 
         self.tt_shapes = list(hp_dict.tt_shapes[name])
@@ -48,22 +63,24 @@ class TTConv2dM(Module):
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-
         self.tt_ranks = list(hp_dict.ranks[name])
         self.out_tt_ranks = self.tt_ranks[:self.out_tt_order + 1]
         self.in_tt_ranks = self.tt_ranks[self.out_tt_order + 1:]
+
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.transposed = False
+        self.output_padding = _pair(0)
+        self.groups = groups
+        self.padding_mode = padding_mode
 
         self.in_tt_cores = ParameterList([Parameter(torch.Tensor(
             self.in_tt_ranks[i], self.in_tt_shapes[i], self.in_tt_ranks[i + 1]))
             for i in range(self.in_tt_order)])
 
-        self.kernel_size = kernel_size
-        self.stride = stride
-
-        self.core_conv = torch.nn.Conv2d(in_channels=self.in_tt_ranks[0],
-                                         out_channels=self.out_tt_ranks[-1], kernel_size=kernel_size,
-                                         stride=stride, padding=padding, dilation=dilation,
-                                         groups=groups, bias=False, padding_mode=padding_mode)
+        self.core_kernel = Parameter(Tensor(self.out_tt_ranks[-1], self.in_tt_ranks[0], *self.kernel_size))
 
         self.out_tt_cores = ParameterList([Parameter(torch.Tensor(
             self.out_tt_ranks[i], self.out_tt_shapes[i], self.out_tt_ranks[i + 1]))
@@ -78,17 +95,16 @@ class TTConv2dM(Module):
 
         if dense_w is not None:
             w = dense_w.detach().cpu().numpy()
-            kernel_shape = w.shape
-            w = np.reshape(w, [self.out_channels, self.in_channels, -1])
-            tt_shapes = self.out_tt_shapes + [w.shape[-1]] + self.in_tt_shapes
-            tt_cores = ten2tt(w, tt_shapes, self.tt_ranks)
+            w = np.reshape(w, [self.out_channels, self.in_channels, self.kernel_size[0]*self.kernel_size[1]])
+            w = np.transpose(w, [0, 2, 1])
+            tt_cores = ten2tt(w, self.tt_shapes, self.tt_ranks)
 
             for i in range(len(tt_cores)):
                 if i < self.out_tt_order:
                     self.out_tt_cores[i].data = torch.from_numpy(tt_cores[i])
                 elif i == self.out_tt_order:
-                    self.core_conv.weight.data = torch.from_numpy(tt_cores[i]).permute(0, 2, 1).reshape(
-                        self.out_tt_ranks[-1], self.in_tt_ranks[0], kernel_shape[2], kernel_shape[3])
+                    self.core_kernel.data = torch.from_numpy(tt_cores[i]).permute(0, 2, 1).reshape(
+                        self.out_tt_ranks[-1], self.in_tt_ranks[0], self.kernel_size[0], self.kernel_size[1])
                 else:
                     self.in_tt_cores[i - self.out_tt_order - 1].data = torch.from_numpy(tt_cores[i])
 
@@ -100,7 +116,7 @@ class TTConv2dM(Module):
             init.xavier_uniform_(self.out_tt_cores[i])
         for i in range(self.in_tt_order):
             init.xavier_uniform_(self.in_tt_cores[i])
-        self.core_conv.reset_parameters()
+        init.xavier_uniform_(self.core_kernel)
         # init.kaiming_uniform_(self.cores[i], a=math.sqrt(5))
         # if self.bias is not None:
         #     fan_in, _ = init._calculate_fan_in_and_fan_out(weight)
@@ -120,7 +136,7 @@ class TTConv2dM(Module):
                 out.reshape(-1, self.in_tt_shapes[i] * self.in_tt_ranks[i + 1]).t()).t()
         out = out.reshape(batch_size, height, width, self.in_tt_ranks[0]).permute(0, 3, 1, 2)
 
-        out = self.core_conv(out)
+        out = F.conv2d(out, self.core_kernel, None, self.stride, self.padding, self.dilation, self.groups)
         _, _, height_, width_ = out.shape
 
         out = out.permute(0, 2, 3, 1)
@@ -148,10 +164,9 @@ class TTConv2dM(Module):
             tt_flops += a.shape[0] * a.shape[1] * b.shape[1] / 1000 / 1000
         out = out.reshape(batch_size, height, width, self.in_tt_ranks[0]).permute(0, 3, 1, 2)
 
-        out = self.core_conv(out)
+        out = F.conv2d(out, self.core_kernel, None, self.stride, self.padding, self.dilation, self.groups)
         _, _, height_, width_ = out.shape
-        tt_flops += height_ * width_ * self.kernel_size * self.kernel_size * \
-                    self.core_conv.in_channels * self.core_conv.out_channels / 1000 / 1000
+        tt_flops += height_ * width_ * self.core_kernel.numel() / 1000 / 1000
 
         out = out.permute(0, 2, 3, 1)
         for i in range(self.out_tt_order - 1, -1, -1):
@@ -164,15 +179,15 @@ class TTConv2dM(Module):
         if self.bias is not None:
             out += self.bias
 
-        base_flops = height_ * width_ * self.kernel_size * self.kernel_size * self.in_channels * \
+        base_flops = height_ * width_ * self.kernel_size[0] * self.kernel_size[1] * self.in_channels * \
                      self.out_channels / 1000 / 1000
 
         for core in self.in_tt_cores:
             tt_params += core.numel()
         for core in self.out_tt_cores:
             tt_params += core.numel()
-        tt_params += self.core_conv.weight.numel()
-        base_params = self.kernel_size * self.kernel_size * self.in_channels * self.out_channels
+        tt_params += self.core_kernel.numel()
+        base_params = self.kernel_size[0] * self.kernel_size[1] * self.in_channels * self.out_channels
 
         print('baseline # params: {:.2f}K, tt # params: {:.2f}K'.format(base_params / 1000, tt_params / 1000))
         print('baseline # flops: {:.2f}M, tt # flops: {:.2f}M'.format(base_flops, tt_flops))

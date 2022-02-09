@@ -108,7 +108,6 @@ class TTBasicBlock(nn.Module):
 
         if self.downsample is not None:
             identity = self.downsample(x)
-
         out += identity
         out = self.relu(out)
 
@@ -175,7 +174,7 @@ class TTBottleneck(nn.Module):
             hp_dict: Optional = None,
             dense_dict: Optional = None
     ) -> None:
-        super(TTBasicBlock, self).__init__()
+        super(TTBottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.)) * groups
@@ -328,9 +327,7 @@ class TTResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _forward_impl(self, x: Tensor) -> Tensor:
-        assert x.shape[0] == 1
-        # See note [TorchScript super()]
+    def forward(self, x: Tensor) -> Tensor:
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -344,11 +341,7 @@ class TTResNet(nn.Module):
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.fc(x)
-
         return x
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self._forward_impl(x)
 
     def forward_flops(self, x):
         x = self.conv1(x)
@@ -408,11 +401,14 @@ def _tt_resnet(
 @register_model
 def ttr_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet18', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -421,11 +417,46 @@ def ttr_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def ttm_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet18', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TTConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict = timm.create_model('resnet18', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkm_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict = timm.create_model('resnet18', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TKConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -434,11 +465,14 @@ def ttm_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def ttr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet34', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBasicBlock, [3, 4, 6, 3], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -447,11 +481,14 @@ def ttr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def ttr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBottleneck, [3, 4, 6, 3], conv=TTConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -460,11 +497,14 @@ def ttr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def tkr_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet18', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBasicBlock, [2, 2, 2, 2], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -473,11 +513,14 @@ def tkr_resnet18(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def tkr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet34', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBasicBlock, [3, 4, 6, 3], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -486,11 +529,14 @@ def tkr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def tkr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBottleneck, [3, 4, 6, 3], conv=TKConv2dR, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -499,11 +545,14 @@ def tkr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 @register_model
 def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _tt_resnet(TTBottleneck, [3, 4, 6, 3], conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
@@ -511,29 +560,30 @@ def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 if __name__ == '__main__':
     baseline = 'resnet18'
-    model_name = 'ttm_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, '2', tt_type='special')
-    model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
+    model_name = 'tkc_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, '2', tt_type='general')
+    model = timm.create_model(model_name, hp_dict=hp_dict, decompose=True, pretrained=True)
     compr_params = 0
     for name, p in model.named_parameters():
         # if 'conv' in name or 'fc' in name:
-        # print(name, p.shape)
+        print(name, p.shape)
         if p.requires_grad:
             compr_params += int(np.prod(p.shape))
 
-    x = torch.randn(1, 3, 224, 224)
+    x = torch.randn(256, 3, 224, 224)
     _ = model(x)
-    _, compr_flops, base_flops = model.forward_flops(x)
-    base_params = 0
-    model = timm.create_model(baseline)
-    for name, p in model.named_parameters():
-        # if 'conv' in name or 'fc' in name:
-        # print(name, p.shape)
-        if p.requires_grad:
-            base_params += int(np.prod(p.shape))
-    print('Baseline # parameters: {}'.format(base_params))
-    print('Compressed # parameters: {}'.format(compr_params))
-    print('Compression ratio: {:.3f}'.format(base_params / compr_params))
-    print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
-    print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
-    print('FLOPs ratio: {:.3f}'.format(base_flops / compr_flops))
+    print(compr_params)
+    # _, compr_flops, base_flops = model.forward_flops(x)
+    # base_params = 0
+    # model = timm.create_model(baseline)
+    # for name, p in model.named_parameters():
+    #     # if 'conv' in name or 'fc' in name:
+    #     # print(name, p.shape)
+    #     if p.requires_grad:
+    #         base_params += int(np.prod(p.shape))
+    # print('Baseline # parameters: {}'.format(base_params))
+    # print('Compressed # parameters: {}'.format(compr_params))
+    # print('Compression ratio: {:.3f}'.format(base_params / compr_params))
+    # print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
+    # print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
+    # print('FLOPs ratio: {:.3f}'.format(base_flops / compr_flops))
