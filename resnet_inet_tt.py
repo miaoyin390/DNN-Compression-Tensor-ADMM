@@ -8,7 +8,6 @@ import torch
 import pickle
 from torch import Tensor
 import torch.nn as nn
-from torchvision.models.utils import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 from TTConv import TTConv2dM, TTConv2dR
