@@ -1,9 +1,10 @@
 # -*- coding:utf-8 -*-
 # 
 # Author: MIAO YIN
-# Time: 2021/11/3 14:51
+# Time: 2022/2/10 23:41
 
 import timm
+import math
 import numpy as np
 from timm.models import register_model
 from torch import nn
@@ -12,18 +13,12 @@ import pickle
 from torch import Tensor
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
+import utils
 from TTConv import TTConv2dM, TTConv2dR
 from TKConv import TKConv2dR, TKConv2dM, TKConv2dC
 from SVDConv import SVDConv2dC, SVDConv2dR, SVDConv2dM
 from mobilenetv2 import mobilenetv2
 from timm.models.registry import register_model
-
-__all__ = ['TTMobileNetV2', 'ttr_mobilenetv2']
-
-
-model_urls = {
-    'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
-}
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -46,186 +41,164 @@ def _make_divisible(v, divisor, min_value=None):
     return new_v
 
 
-class ConvBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1, norm_layer=None):
-        padding = (kernel_size - 1) // 2
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        super(ConvBNReLU, self).__init__(
-            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False),
-            norm_layer(out_planes),
-            nn.ReLU6(inplace=True)
-        )
+def conv_3x3_bn(inp, oup, stride):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
 
 
-class TTConvBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1, norm_layer=None,
-                 conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
-                 hp_dict=None, name=None, dense_w=None):
-        padding = (kernel_size - 1) // 2
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        super(TTConvBNReLU, self).__init__(
-            conv(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False,
-                 hp_dict=hp_dict, name=name, dense_w=dense_w),
-            norm_layer(out_planes),
-            nn.ReLU6(inplace=True)
-        )
+def conv_1x1_bn(inp, oup):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
+
+
+def tt_conv_1x1_bn(inp, oup, conv, hp_dict, name, dense_w):
+    return nn.Sequential(
+        conv(inp, oup, 1, 1, 0, bias=False, hp_dict=hp_dict, name=name, dense_w=dense_w),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
 
 
 class TTInvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, id=None,
+    def __init__(self, inp, oup, stride, expand_ratio, id=None,
                  conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
                  hp_dict=None, dense_dict=None):
         super(TTInvertedResidual, self).__init__()
-        self.stride = stride
         assert stride in [1, 2]
 
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-
-        hidden_dim = int(round(inp * expand_ratio))
-        self.use_res_connect = self.stride == 1 and inp == oup
+        hidden_dim = round(inp * expand_ratio)
+        self.identity = stride == 1 and inp == oup
 
         layers = []
-        w0_name = 'features.' + str(id) + '.conv.0.0.weight'
-        # dw layer too compact to compress
-        # w1_name = 'features.' + str(id) + '.conv.1.0.weight'
-        w2_name = 'features.' + str(id) + '.conv.2.weight'
-        if expand_ratio != 1:
-            # pw
-            if w0_name in hp_dict.ranks:
-                layers.append(TTConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer,
-                                           conv=conv, hp_dict=hp_dict, name=w0_name,
-                                           dense_w=None if dense_dict is None else dense_dict[w0_name]))
-            else:
-                layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
-        layers.extend([
+        if expand_ratio == 1:
             # dw
-            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
+            w_name = 'features.' + str(id) + '.conv.0.weight'
+            if w_name in hp_dict.ranks:
+                layers.append(conv(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False,
+                                   hp_dict=hp_dict, name=w_name,
+                                   dense_w=None if dense_dict is None else dense_dict[w_name]))
+            else:
+                layers.append(nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False))
+            layers.append(nn.BatchNorm2d(hidden_dim))
+            layers.append(nn.ReLU6(inplace=True))
             # pw-linear
-            conv(hidden_dim, oup, 1, 1, 0, bias=False, hp_dict=hp_dict, name=w2_name,
-                 dense_w=None if dense_dict is None else dense_dict[w2_name]) if w2_name in hp_dict.ranks
-            else nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            norm_layer(oup),
-        ])
+            w_name = 'features.' + str(id) + '.conv.3.weight'
+            if w_name in hp_dict.ranks:
+                layers.append(conv(hidden_dim, oup, 1, 1, 0, bias=False, hp_dict=hp_dict, name=w_name,
+                                   dense_w=None if dense_dict is None else dense_dict[w_name]))
+            else:
+                layers.append(nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False))
+            layers.append(nn.BatchNorm2d(oup))
+        else:
+            # pw
+            w_name = 'features.' + str(id) + '.conv.0.weight'
+            if w_name in hp_dict.ranks:
+                layers.append(conv(inp, hidden_dim, 1, 1, 0, bias=False, hp_dict=hp_dict, name=w_name,
+                                   dense_w=None if dense_dict is None else dense_dict[w_name]))
+            else:
+                layers.append(nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False))
+            layers.append(nn.BatchNorm2d(hidden_dim))
+            layers.append(nn.ReLU6(inplace=True))
+            # dw
+            w_name = 'features.' + str(id) + '.conv.3.weight'
+            if w_name in hp_dict.ranks:
+                layers.append(conv(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False,
+                                   hp_dict=hp_dict, name=w_name,
+                                   dense_w=None if dense_dict is None else dense_dict[w_name]))
+            else:
+                layers.append(nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False))
+            layers.append(nn.BatchNorm2d(hidden_dim))
+            layers.append(nn.ReLU6(inplace=True))
+            # pw-linear
+            w_name = 'features.' + str(id) + '.conv.6.weight'
+            if w_name in hp_dict.ranks:
+                layers.append(conv(hidden_dim, oup, 1, 1, 0, bias=False, hp_dict=hp_dict, name=w_name,
+                                   dense_w=None if dense_dict is None else dense_dict[w_name]))
+            else:
+                layers.append(nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False))
+            layers.append(nn.BatchNorm2d(oup))
+
         self.conv = nn.Sequential(*layers)
 
     def forward(self, x):
-        if self.use_res_connect:
+        if self.identity:
             return x + self.conv(x)
         else:
             return self.conv(x)
 
 
 class TTMobileNetV2(nn.Module):
-    def __init__(self,
-                 num_classes=1000,
-                 width_mult=1.0,
-                 inverted_residual_setting=None,
-                 round_nearest=8,
-                 block=None,
-                 norm_layer=None,
+    def __init__(self, num_classes=1000, width_mult=1., cfgs=None,
                  conv=Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR],
                  hp_dict=None,
-                 dense_dict=None,
-                 ):
-        """
-        MobileNet V2 main class
-
-        Args:
-            num_classes (int): Number of classes
-            width_mult (float): Width multiplier - adjusts number of channels in each layer by this amount
-            inverted_residual_setting: Network structure
-            round_nearest (int): Round the number of channels in each layer to be a multiple of this number
-            Set to 1 to turn off rounding
-            block: Module specifying inverted residual building block for mobilenet
-            norm_layer: Module specifying the normalization layer to use
-
-        """
+                 dense_dict=None):
         super(TTMobileNetV2, self).__init__()
-
-        if block is None:
-            block = TTInvertedResidual
-
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-
-        input_channel = 32
-        last_channel = 1280
-
-        if inverted_residual_setting is None:
-            inverted_residual_setting = [
-                # t, c, n, s
-                [1, 16, 1, 1],
-                [6, 24, 2, 2],
-                [6, 32, 3, 2],
-                [6, 64, 4, 2],
-                [6, 96, 3, 1],
-                [6, 160, 3, 2],
-                [6, 320, 1, 1],
-            ]
-
-        # only check the first element, assuming user knows t,c,n,s are required
-        if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
-            raise ValueError("inverted_residual_setting should be non-empty "
-                             "or a 4-element list, got {}".format(inverted_residual_setting))
+        # setting of inverted residual blocks
+        self.cfgs = [
+            # t, c, n, s
+            [1,  16, 1, 1],
+            [6,  24, 2, 2],
+            [6,  32, 3, 2],
+            [6,  64, 4, 2],
+            [6,  96, 3, 1],
+            [6, 160, 3, 2],
+            [6, 320, 1, 1],
+        ] if cfgs is None else cfgs
 
         # building first layer
-        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
-        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
-        features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+        input_channel = _make_divisible(32 * width_mult, 4 if width_mult == 0.1 else 8)
+        layers = [conv_3x3_bn(3, input_channel, 2)]
         # building inverted residual blocks
+        block = TTInvertedResidual
         id = 1
-        for t, c, n, s in inverted_residual_setting:
-            output_channel = _make_divisible(c * width_mult, round_nearest)
+        for t, c, n, s in self.cfgs:
+            output_channel = _make_divisible(c * width_mult, 4 if width_mult == 0.1 else 8)
             for i in range(n):
-                stride = s if i == 0 else 1
-                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
-                                      id=id, conv=conv, hp_dict=hp_dict, dense_dict=dense_dict))
-                id += 1
+                layers.append(block(input_channel, output_channel, s if i == 0 else 1, t,
+                                    id=id, conv=conv, hp_dict=hp_dict, dense_dict=dense_dict))
                 input_channel = output_channel
+                id += 1
+        self.features = nn.Sequential(*layers)
         # building last several layers
-        w_name = 'features.18.0.weight'
+        output_channel = _make_divisible(1280 * width_mult, 4 if width_mult == 0.1 else 8) if width_mult > 1.0 else 1280
+        w_name = 'conv.0.weight'
         if w_name in hp_dict.ranks:
-            features.append(TTConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer,
-                                         conv=conv, hp_dict=hp_dict, name=w_name,
-                                         dense_w=None if dense_dict is None else dense_dict[w_name]))
+            self.conv = tt_conv_1x1_bn(input_channel, output_channel, conv=conv, hp_dict=hp_dict, name=w_name,
+                                       dense_w=None if dense_dict is None else dense_dict[w_name])
         else:
-            features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
-        # make it nn.Sequential
-        self.features = nn.Sequential(*features)
+            self.conv = conv_1x1_bn(input_channel, output_channel)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.classifier = nn.Linear(output_channel, num_classes)
 
-        # building classifier
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(self.last_channel, num_classes),
-        )
+        self._initialize_weights()
 
-        # weight initialization
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out')
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
-                nn.init.ones_(m.weight)
-                nn.init.zeros_(m.bias)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.zeros_(m.bias)
-
-    def _forward_impl(self, x):
-        # This exists since TorchScript doesn't support inheritance, so the superclass method
-        # (this one) needs to have a name other than `forward` that can be accessed in a subclass
+    def forward(self, x):
         x = self.features(x)
-        # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
-        x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
+        x = self.conv(x)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
 
-    def forward(self, x):
-        return self._forward_impl(x)
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
 
 
 def _tt_mobilenetv2(conv, hp_dict, dense_dict=None, **kwargs):
@@ -261,9 +234,52 @@ def ttr_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwa
     return model
 
 
+@register_model
+def tkc_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict_ = timm.create_model('mobilenetv2_100', pretrained=True).state_dict()
+            dense_dict = mobilenetv2().state_dict()
+            for k1, k2 in zip(dense_dict.keys(), dense_dict_.keys()):
+                print(k1, k2)
+                dense_dict[k1].data = dense_dict_[k2]
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2(conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+
+    return model
+
+
+@register_model
+def svdc_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict_ = timm.create_model('mobilenetv2_100', pretrained=True).state_dict()
+            dense_dict = mobilenetv2().state_dict()
+            for k1, k2 in zip(dense_dict.keys(), dense_dict_.keys()):
+                print(k1, k2)
+                dense_dict[k1].data = dense_dict_[k2]
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2(conv=SVDConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+
+    return model
+
+
 if __name__ == '__main__':
-    from hp_dicts.tt_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
-    model = timm.create_model('ttr_mobilenetv2', hp_dict=hp_dict, decompose=None)
+    model_name = 'svdc_mobilenetv2'
+    hp_dict = utils.get_hp_dict(model_name, ratio='2')
+    model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     n_params = 0
     for name, p in model.named_parameters():
         # if 'conv' in name or 'linear' in name:

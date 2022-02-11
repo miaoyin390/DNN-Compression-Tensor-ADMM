@@ -348,6 +348,11 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
             from hp_dicts.tt_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
+    elif 'svd' in format and 'mobilenetv2' in model_name and 'cifar' not in model_name:
+        if ratio == '2':
+            from hp_dicts.svd_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
     elif 'tk' in format and 'mobilenetv2_cifar' in model_name:
         if ratio == '2':
             from hp_dicts.tk_mobilenetv2_cifar_hp import HyperParamsDictRatio2x as hp_dict

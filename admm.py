@@ -48,9 +48,12 @@ class ADMM:
                     if self.format == 'tk':
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tk(z.detach().cpu().numpy(), name)).to(self.device)
-                    else:
+                    if self.format == 'tt':
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
+                    else:
+                        self.z[name] = torch.from_numpy(
+                            self.prune_conv_rank_svd(z, name)).to(self.device)
                 # elif 'fc' in name or 'qkv' in name or 'proj' in name:
                 elif len(param.shape) == 2:
                     if self.format == 'tk':
@@ -117,5 +120,17 @@ class ADMM:
         ranks = self.hp_dict.ranks[name]
         core_tensor, (last_factor, first_factor) = partial_tucker(z, modes=[0, 1], rank=ranks, init='svd')
         updated_z = tl.tucker_to_tensor((core_tensor, (last_factor, first_factor)))
+
+        return updated_z
+
+    def prune_conv_rank_svd(self, z, name):
+        rank = self.hp_dict.ranks[name]
+        u, s, v = np.linalg.svd(z.detach().squeeze().cpu().numpy(), full_matrices=False)
+        u = u[:, :rank]
+        s = s[:rank]
+        v = v[:rank, :]
+        updated_z = u @ np.diag(s) @ v
+        updated_z = np.expand_dims(updated_z, -1)
+        updated_z = np.expand_dims(updated_z, -1)
 
         return updated_z
