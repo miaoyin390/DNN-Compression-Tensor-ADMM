@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 def append_double_l2_loss(model, loss, rho):
     for name, param in model.named_parameters():
-        if 'first_conv.weight' in name or 'last_conv.weight' in name or \
+        if 'first_kernel' in name or 'last_kernel' in name or \
                 'first_factor' in name or 'last_factor' in name:
             if param.shape[0] < param.shape[1]:
                 eye = torch.eye(param.shape[0]).cuda()
