@@ -168,6 +168,7 @@ def train(model, args):
     loss_scaler = torch.cuda.amp.GradScaler()
 
     lr_scheduler, _ = create_scheduler(args, optimizer)
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer)
 
     if args.mixup > 0.:
         # smoothing is handled with mixup label transform
