@@ -59,9 +59,12 @@ class ADMM:
                     if self.format == 'tk':
                         self.z[name] = torch.from_numpy(
                             self.prune_linear_rank_tk(z.detach().cpu().numpy(), name)).to(self.device)
-                    else:
+                    elif self.format == 'tt':
                         self.z[name] = torch.from_numpy(
                             self.prune_linear_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
+                    else:
+                        self.z[name] = torch.from_numpy(
+                            self.prune_linear_rank_svd(z, name)).to(self.device)
                 else:
                     raise Exception('ERROR: unsupported layer in ADMM!')
 
@@ -81,9 +84,9 @@ class ADMM:
                 # dense_loss += 0.5 * rho * p.norm()
         return loss
 
-    def adjust_rho(self, epoch, epochs):
+    def adjust_rho(self, epoch, epochs, factor=5):
         if epoch > int(0.85 * epochs):
-            self.rho = 10 * self.init_rho
+            self.rho = factor * self.init_rho
 
     def prune_conv_rank_tt(self, z, name):
         kernel_shape = z.shape
@@ -132,5 +135,15 @@ class ADMM:
         updated_z = u @ np.diag(s) @ v
         updated_z = np.expand_dims(updated_z, -1)
         updated_z = np.expand_dims(updated_z, -1)
+
+        return updated_z
+
+    def prune_linear_rank_svd(self, z, name):
+        rank = self.hp_dict.ranks[name]
+        u, s, v = np.linalg.svd(z.detach().cpu().numpy(), full_matrices=False)
+        u = u[:, :rank]
+        s = s[:rank]
+        v = v[:rank, :]
+        updated_z = u @ np.diag(s) @ v
 
         return updated_z
