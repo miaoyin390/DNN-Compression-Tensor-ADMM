@@ -275,7 +275,7 @@ def train(model, args):
                     if args.admm:
                         loss = admm.append_admm_loss(loss)
                     if args.orthogonal:
-                        loss = orthogonal.append_double_l2_loss(model_without_ddp, loss, args.rho)
+                        loss = orthogonal.append_double_l2_loss(model_without_ddp, loss, args.rho, device)
             else:
                 outputs = model(samples)
                 loss = criterion(samples, outputs, targets)
