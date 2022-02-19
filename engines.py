@@ -147,7 +147,7 @@ def train(model, args):
 
     if args.distributed:
         print('*INFO: Distributed training.')
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=list(args.gpus))
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpus])
         model_without_ddp = model.module
     elif args.parallel:
         print('*INFO: Parallel training.')
@@ -279,7 +279,7 @@ def train(model, args):
                 if args.admm:
                     loss = admm.append_admm_loss(loss)
                 if args.orthogonal:
-                    loss = orthogonal.append_double_l2_loss(model_without_ddp, loss, args.rho)
+                    loss = orthogonal.append_double_l2_loss(model_without_ddp, loss, args.rho, device)
 
             loss_value = loss.item()
 

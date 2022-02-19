@@ -130,16 +130,16 @@ def parse_args():
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
     parser.add_argument('--runtime', action='store_true', help='Perform runtime test only')
     parser.add_argument('--dist-eval', action='store_true', default=False, help='Enabling distributed evaluation')
-    parser.add_argument('--num-workers', default=4, type=int)
+    parser.add_argument('--num-workers', default=2, type=int)
     parser.add_argument('--pin-memory', action='store_true', default=True,
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
-    parser.add_argument('--no-pin-mem', action='store_false', dest='pin_memory', default=False,
+    parser.add_argument('--no-pin-memory', action='store_false', dest='pin_memory', default=False,
                         help='')
 
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+    parser.add_argument('--dist_url', default='ftp://127.0.0.1:32143', help='url used to set up distributed training')
 
     # ----------------------------------------------------------------------------------------
     parser.add_argument('--rho', default=0.001, type=float, help="Control the imposing strength of ADMM training")

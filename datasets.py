@@ -224,6 +224,7 @@ def get_data_loader(is_train, args):
     if args.distributed:
         num_tasks = utils.get_world_size()
         global_rank = utils.get_rank()
+        print('888888888888888888', global_rank)
         sampler_train = torch.utils.data.DistributedSampler(
             dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True)
         sampler_val = torch.utils.data.DistributedSampler(
