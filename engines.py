@@ -65,7 +65,6 @@ def evaluate(data_loader, model, device, print_freq=100):
 
 
 def eval(model, args):
-    utils.init_distributed_mode(args)
     device = torch.device(args.device)
     model.to(device)
     if args.timm_loader:
@@ -77,7 +76,6 @@ def eval(model, args):
 
 @torch.no_grad()
 def eval_runtime(model, args):
-    utils.init_distributed_mode(args)
     device = torch.device(args.device)
     model.to(device)
     if args.timm_loader:
@@ -107,7 +105,6 @@ def eval_runtime(model, args):
 
 
 def train(model, args):
-    utils.init_distributed_mode(args)
     print(args)
 
     if args.distillation_type != 'none' and args.finetune and not args.eval:

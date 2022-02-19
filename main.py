@@ -49,6 +49,9 @@ def main(args):
     else:
         model_dict = dict()
 
+    if args.distributed:
+        utils.init_distributed_mode(args)
+
     if args.device == 'cuda':
         torch.cuda.set_device(f'cuda:{list(args.gpus)[0]}')
 
