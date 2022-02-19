@@ -141,45 +141,35 @@ def get_val_loader(args):
 
 def get_data_loader(is_train, args):
     if args.dataset == 'cifar10':
-        if is_train:
-            data_loader = DataLoader(
-                datasets.CIFAR10('~/datasets/cifar10',
-                                 train=True, download=True,
-                                 transform=transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                                               transforms.RandomHorizontalFlip(),
-                                                               transforms.ToTensor(),
-                                                               transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                                                                    (0.2023, 0.1994, 0.2010))])),
-                batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memory)
-        else:
-            data_loader = DataLoader(
-                datasets.CIFAR10('~/datasets/cifar10', train=False, download=True,
-                                 transform=transforms.Compose([
-                                     transforms.ToTensor(),
-                                     transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                                          (0.2023, 0.1994, 0.2010))
-                                 ])),
-                batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=args.pin_memory)
+        dataset_train = datasets.CIFAR10('~/datasets/cifar10',
+                                         train=True, download=True,
+                                         transform=transforms.Compose([transforms.RandomCrop(32, padding=4),
+                                                                       transforms.RandomHorizontalFlip(),
+                                                                       transforms.ToTensor(),
+                                                                       transforms.Normalize(
+                                                                           (0.4914, 0.4822, 0.4465),
+                                                                           (0.2023, 0.1994, 0.2010))]))
+        dataset_val = datasets.CIFAR10('~/datasets/cifar10', train=False, download=True,
+                                       transform=transforms.Compose([
+                                           transforms.ToTensor(),
+                                           transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                                                (0.2023, 0.1994, 0.2010))
+                                       ]))
     elif args.dataset == 'cifar100':
-        if is_train:
-            data_loader = DataLoader(
-                datasets.CIFAR100('~/datasets/cifar100',
-                                  train=True, download=True,
-                                  transform=transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                                                transforms.RandomHorizontalFlip(),
-                                                                transforms.ToTensor(),
-                                                                transforms.Normalize((0.5071, 0.4867, 0.4408),
-                                                                                     (0.2675, 0.2565, 0.2761))])),
-                batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memory)
-        else:
-            data_loader = DataLoader(
-                datasets.CIFAR100('~/datsets/cifar100', train=False, download=True,
-                                  transform=transforms.Compose([
-                                      transforms.ToTensor(),
-                                      transforms.Normalize((0.5071, 0.4867, 0.4408),
-                                                           (0.2675, 0.2565, 0.2761))
-                                  ])),
-                batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memory)
+        dataset_train = datasets.CIFAR100('~/datasets/cifar100',
+                                          train=True, download=True,
+                                          transform=transforms.Compose([transforms.RandomCrop(32, padding=4),
+                                                                        transforms.RandomHorizontalFlip(),
+                                                                        transforms.ToTensor(),
+                                                                        transforms.Normalize(
+                                                                            (0.5071, 0.4867, 0.4408),
+                                                                            (0.2675, 0.2565, 0.2761))]))
+        dataset_val = datasets.CIFAR100('~/datsets/cifar100', train=False, download=True,
+                                        transform=transforms.Compose([
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.5071, 0.4867, 0.4408),
+                                                                 (0.2675, 0.2565, 0.2761))
+                                        ]))
     elif args.dataset == 'imagenet':
         if os.path.exists('2080.work'):
             data_path = '/home/miao/datasets/imagenet/'
@@ -187,60 +177,67 @@ def get_data_loader(is_train, args):
             data_path = '/raid/data/ilsvrc2012/'
         else:
             data_path = '/home/datasets/imagenet/'
-        if is_train:
-            # train_path = os.path.join(data_path, 'train')
-            # data_loader = DataLoader(
-            #     datasets.ImageFolder(train_path,
-            #                          transform=transforms.Compose([transforms.RandomResizedCrop(224),
-            #                                                        transforms.RandomHorizontalFlip(),
-            #                                                        transforms.ToTensor(),
-            #                                                        transforms.Normalize((0.485, 0.456, 0.406),
-            #                                                                             (0.229, 0.224, 0.225))])),
-            #     batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memrory)
-            data_loader = DataLoader(
-                datasets.ImageNet(data_path, split='train',
-                                  transform=transforms.Compose([transforms.RandomResizedCrop(args.input_size),
-                                                                transforms.RandomHorizontalFlip(),
-                                                                transforms.ToTensor(),
-                                                                transforms.Normalize((0.485, 0.456, 0.406),
-                                                                                     (0.229, 0.224, 0.225))])),
-                batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memory)
-        else:
-            # test_path = os.path.join(data_path, 'val')
-            # data_loader = DataLoader(
-            #     datasets.ImageFolder(test_path,
-            #                          transform=transforms.Compose([
-            #                              transforms.Resize(256),
-            #                              transforms.CenterCrop(224),
-            #                              transforms.ToTensor(),
-            #                              transforms.Normalize((0.485, 0.456, 0.406),
-            #                                                   (0.229, 0.224, 0.225))
-            #                          ])),
-            #     batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=args.pin_memory)
-            data_loader = DataLoader(
-                datasets.ImageNet(data_path, split='val',
-                                  transform=transforms.Compose([
-                                      transforms.Resize(int(256 / 224 * args.input_size)),
-                                      transforms.CenterCrop(args.input_size),
-                                      transforms.ToTensor(),
-                                      transforms.Normalize((0.485, 0.456, 0.406),
-                                                           (0.229, 0.224, 0.225))
-                                  ])),
-                batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=args.pin_memory)
+        # train_path = os.path.join(data_path, 'train')
+        # data_loader = DataLoader(
+        #     datasets.ImageFolder(train_path,
+        #                          transform=transforms.Compose([transforms.RandomResizedCrop(224),
+        #                                                        transforms.RandomHorizontalFlip(),
+        #                                                        transforms.ToTensor(),
+        #                                                        transforms.Normalize((0.485, 0.456, 0.406),
+        #                                                                             (0.229, 0.224, 0.225))])),
+        #     batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memrory)
+        dataset_train = datasets.ImageNet(data_path, split='train',
+                                          transform=transforms.Compose([transforms.RandomResizedCrop(args.input_size),
+                                                                        transforms.RandomHorizontalFlip(),
+                                                                        transforms.ToTensor(),
+                                                                        transforms.Normalize((0.485, 0.456, 0.406),
+                                                                                             (0.229, 0.224, 0.225))]))
+        # test_path = os.path.join(data_path, 'val')
+        # data_loader = DataLoader(
+        #     datasets.ImageFolder(test_path,
+        #                          transform=transforms.Compose([
+        #                              transforms.Resize(256),
+        #                              transforms.CenterCrop(224),
+        #                              transforms.ToTensor(),
+        #                              transforms.Normalize((0.485, 0.456, 0.406),
+        #                                                   (0.229, 0.224, 0.225))
+        #                          ])),
+        #     batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=args.pin_memory)
+        dataset_val = datasets.ImageNet(data_path, split='val',
+                                        transform=transforms.Compose([
+                                            transforms.Resize(int(256 / 224 * args.input_size)),
+                                            transforms.CenterCrop(args.input_size),
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.485, 0.456, 0.406),
+                                                                 (0.229, 0.224, 0.225))
+                                        ]))
     elif args.dataset == 'mnist':
-        if is_train:
-            data_loader = DataLoader(
-                datasets.MNIST('~/datasets/mnist', train=True, download=True,
-                               transform=transforms.Compose([transforms.ToTensor(),
-                                                             transforms.Normalize((0.1307,), (0.3081,))])),
-                batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memory)
-        else:
-            data_loader = DataLoader(
-                datasets.MNIST('~/datasets/mnist', train=False, download=True,
-                               transform=transforms.Compose([transforms.ToTensor(),
-                                                             transforms.Normalize((0.1307,), (0.3081,))])),
-                batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memory)
+        dataset_train = datasets.MNIST('~/datasets/mnist', train=True, download=True,
+                                       transform=transforms.Compose([transforms.ToTensor(),
+                                                                     transforms.Normalize((0.1307,), (0.3081,))]))
+        dataset_val = datasets.MNIST('~/datasets/mnist', train=False, download=True,
+                                     transform=transforms.Compose([transforms.ToTensor(),
+                                                                   transforms.Normalize((0.1307,), (0.3081,))]))
     else:
         raise Exception('ERROR: Unspecified dataset!')
+
+    if args.distributed:
+        num_tasks = utils.get_world_size()
+        global_rank = utils.get_rank()
+        sampler_train = torch.utils.data.DistributedSampler(
+            dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
+        )
+        sampler_val = torch.utils.data.DistributedSampler(
+            dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=True
+        )
+    else:
+        sampler_train = None
+        sampler_val = None
+    if is_train:
+        data_loader = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True,
+                                 num_workers=args.num_workers, pin_memory=args.pin_memory, sampler=sampler_train)
+    else:
+        data_loader = DataLoader(dataset_val, batch_size=args.batch_size, shuffle=False,
+                                 num_workers=args.num_workers, pin_memory=args.pin_memory, sampler=sampler_val)
 
     return data_loader
