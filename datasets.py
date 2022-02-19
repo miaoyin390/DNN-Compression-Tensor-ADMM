@@ -225,16 +225,15 @@ def get_data_loader(is_train, args):
         num_tasks = utils.get_world_size()
         global_rank = utils.get_rank()
         sampler_train = torch.utils.data.DistributedSampler(
-            dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
-        )
+            dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True)
         sampler_val = torch.utils.data.DistributedSampler(
-            dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=True
-        )
+            dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False)
+
     else:
         sampler_train = None
         sampler_val = None
     if is_train:
-        data_loader = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True,
+        data_loader = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=sampler_train is None,
                                  num_workers=args.num_workers, pin_memory=args.pin_memory, sampler=sampler_train)
     else:
         data_loader = DataLoader(dataset_val, batch_size=args.batch_size, shuffle=False,
