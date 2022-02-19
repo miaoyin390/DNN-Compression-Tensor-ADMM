@@ -135,7 +135,11 @@ def parse_args():
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
     parser.add_argument('--no-pin-mem', action='store_false', dest='pin_memory', default=False,
                         help='')
-    parser.set_defaults(pin_mem=True)
+
+    # distributed training parameters
+    parser.add_argument('--world_size', default=1, type=int,
+                        help='number of distributed processes')
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     # ----------------------------------------------------------------------------------------
     parser.add_argument('--rho', default=0.001, type=float, help="Control the imposing strength of ADMM training")
@@ -161,9 +165,6 @@ def parse_args():
     parser.add_argument('--log', action='store_true', default=False)
     parser.add_argument('--fp16', action='store_true', default=False)
     parser.add_argument('--timm-loader', action='store_true', default=False)
-    # parser.add_argument('--no-timm-loader', action='store_false', dest='timm_loader', default=False,
-    #                     help='')
-    # parser.set_defaults(timm_loader=True)
 
     args = parser.parse_args()
 
