@@ -14,6 +14,7 @@ from timm.models.registry import register_model
 
 from TTConv import TTConv2dM, TTConv2dR
 from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
+from StfTKConv import StfTKConv2dC
 from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 import utils
@@ -386,6 +387,19 @@ def tkc_resnet20(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
     return model
 
 
+@register_model
+def stftkc_resnet32(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_resnet([5, 5, 5], conv=StfTKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == '__main__':
     # model_name = 'ttm_resnet32'
     # hp_dict = utils.get_hp_dict(model_name, '3')
@@ -398,28 +412,28 @@ if __name__ == '__main__':
     # print('Total # parameters: {}'.format(n_params))
 
     baseline = 'resnet32'
-    model_name = 'tkc_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, ratio='3')
+    model_name = 'stftkc_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, ratio='2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     compr_params = 0
     for name, p in model.named_parameters():
-        # if 'conv' in name or 'fc' in name:
-            # print(name, p.shape)
+        if 'conv' in name or 'fc' in name:
+            print(name, p.shape)
         if p.requires_grad:
             compr_params += int(np.prod(p.shape))
 
-    x = torch.randn(1, 3, 32, 32)
-    _, compr_flops, base_flops = model.forward_flops(x)
-    base_params = 0
-    model = timm.create_model(baseline)
-    for name, p in model.named_parameters():
-        # if 'conv' in name or 'fc' in name:
-            # print(name, p.shape)
-        if p.requires_grad:
-            base_params += int(np.prod(p.shape))
-    print('Baseline # parameters: {}'.format(base_params))
-    print('Compressed # parameters: {}'.format(compr_params))
-    print('Compression ratio: {:.3f}'.format(base_params/compr_params))
-    print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
-    print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
-    print('FLOPs ratio: {:.3f}'.format(base_flops/compr_flops))
+    # x = torch.randn(1, 3, 32, 32)
+    # _, compr_flops, base_flops = model.forward_flops(x)
+    # base_params = 0
+    # model = timm.create_model(baseline)
+    # for name, p in model.named_parameters():
+    #     # if 'conv' in name or 'fc' in name:
+    #         # print(name, p.shape)
+    #     if p.requires_grad:
+    #         base_params += int(np.prod(p.shape))
+    # print('Baseline # parameters: {}'.format(base_params))
+    # print('Compressed # parameters: {}'.format(compr_params))
+    # print('Compression ratio: {:.3f}'.format(base_params/compr_params))
+    # print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
+    # print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
+    # print('FLOPs ratio: {:.3f}'.format(base_flops/compr_flops))

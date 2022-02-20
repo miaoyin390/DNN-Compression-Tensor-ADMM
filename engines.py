@@ -6,6 +6,7 @@
 import datetime
 import os.path
 
+import geoopt.optim
 import numpy as np
 import time
 import torch
@@ -160,7 +161,16 @@ def train(model, args):
 
     linear_scaled_lr = args.lr * utils.get_world_size()
     args.lr = linear_scaled_lr
-    optimizer = create_optimizer(args, model_without_ddp)
+    if args.model.startswith('stf'):
+        print('*INFO: Riemannian optimizer for manifold model')
+        if args.optim == 'sgd' or args.optim == 'momentum':
+            optimizer = geoopt.optim.RiemannianSGD(model_without_ddp.parameters(), lr=args.lr,
+                                                   momentum=0.9, weight_decay=args.weight_decay)
+        if args.optim == 'adam':
+            optimizer = geoopt.optim.RiemannianAdam(model_without_ddp.parameters(), lr=args.lr,
+                                                    weight_decay=args.weight_decay)
+    else:
+        optimizer = create_optimizer(args, model_without_ddp)
     # loss_scaler = NativeScaler()
     loss_scaler = torch.cuda.amp.GradScaler()
 
