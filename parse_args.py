@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument('--drop-path', type=float, default=0.1, metavar='PCT',
                         help='Drop path rate (default: 0.1)')
 
-    parser.add_argument('--model-ema', default='False', action='store_true')
+    parser.add_argument('--model-ema', default=False, action='store_true')
     # parser.add_argument('--no-model-ema', action='store_false', dest='model_ema')
     # parser.set_defaults(model_ema=False)
     parser.add_argument('--model-ema-decay', type=float, default=0.99996, help='')

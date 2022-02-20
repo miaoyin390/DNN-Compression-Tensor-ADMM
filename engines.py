@@ -163,12 +163,12 @@ def train(model, args):
     args.lr = linear_scaled_lr
     if args.model.startswith('stf'):
         print('*INFO: Riemannian optimizer for manifold model')
-        if args.optim == 'sgd' or args.optim == 'momentum':
-            optimizer = geoopt.optim.RiemannianSGD(model_without_ddp.parameters(), lr=args.lr,
-                                                   momentum=0.9, weight_decay=args.weight_decay)
-        if args.optim == 'adam':
+        if args.opt == 'adam':
             optimizer = geoopt.optim.RiemannianAdam(model_without_ddp.parameters(), lr=args.lr,
                                                     weight_decay=args.weight_decay)
+        else:
+            optimizer = geoopt.optim.RiemannianSGD(model_without_ddp.parameters(), lr=args.lr,
+                                                   momentum=0.9, weight_decay=args.weight_decay)
     else:
         optimizer = create_optimizer(args, model_without_ddp)
     # loss_scaler = NativeScaler()
