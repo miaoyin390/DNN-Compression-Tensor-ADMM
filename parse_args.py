@@ -139,7 +139,7 @@ def parse_args():
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--dist_url', default='ftp://127.0.0.1:32143', help='url used to set up distributed training')
+    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     # ----------------------------------------------------------------------------------------
     parser.add_argument('--rho', default=0.001, type=float, help="Control the imposing strength of ADMM training")
