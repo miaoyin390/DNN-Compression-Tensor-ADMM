@@ -172,40 +172,42 @@ def get_data_loader(is_train, args):
                                         ]))
     elif args.dataset == 'imagenet':
 
-        # train_path = os.path.join(data_path, 'train')
-        # data_loader = DataLoader(
-        #     datasets.ImageFolder(train_path,
-        #                          transform=transforms.Compose([transforms.RandomResizedCrop(224),
-        #                                                        transforms.RandomHorizontalFlip(),
-        #                                                        transforms.ToTensor(),
-        #                                                        transforms.Normalize((0.485, 0.456, 0.406),
-        #                                                                             (0.229, 0.224, 0.225))])),
-        #     batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memrory)
-        dataset_train = datasets.ImageNet(args.data_path, split='train',
-                                          transform=transforms.Compose([transforms.RandomResizedCrop(args.input_size),
-                                                                        transforms.RandomHorizontalFlip(),
-                                                                        transforms.ToTensor(),
-                                                                        transforms.Normalize((0.485, 0.456, 0.406),
-                                                                                             (0.229, 0.224, 0.225))]))
-        # test_path = os.path.join(data_path, 'val')
-        # data_loader = DataLoader(
-        #     datasets.ImageFolder(test_path,
-        #                          transform=transforms.Compose([
-        #                              transforms.Resize(256),
-        #                              transforms.CenterCrop(224),
-        #                              transforms.ToTensor(),
-        #                              transforms.Normalize((0.485, 0.456, 0.406),
-        #                                                   (0.229, 0.224, 0.225))
-        #                          ])),
-        #     batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=args.pin_memory)
-        dataset_val = datasets.ImageNet(args.data_path, split='val',
-                                        transform=transforms.Compose([
-                                            transforms.Resize(int(256 / 224 * args.input_size)),
-                                            transforms.CenterCrop(args.input_size),
-                                            transforms.ToTensor(),
-                                            transforms.Normalize((0.485, 0.456, 0.406),
-                                                                 (0.229, 0.224, 0.225))
-                                        ]))
+        if args.image_folder:
+            train_path = os.path.join(args.data_path, 'train')
+            dataset_train = datasets.ImageFolder(train_path,
+                                                 transform=transforms.Compose(
+                                                     [transforms.RandomResizedCrop(args.input_size),
+                                                      transforms.RandomHorizontalFlip(),
+                                                      transforms.ToTensor(),
+                                                      transforms.Normalize((0.485, 0.456, 0.406),
+                                                                           (0.229, 0.224, 0.225))]))
+
+            test_path = os.path.join(args.data_path, 'val')
+            dataset_val = datasets.ImageFolder(test_path,
+                                               transform=transforms.Compose([
+                                                   transforms.Resize(int(256 / 224 * args.input_size)),
+                                                   transforms.CenterCrop(args.input_size),
+                                                   transforms.ToTensor(),
+                                                   transforms.Normalize((0.485, 0.456, 0.406),
+                                                                        (0.229, 0.224, 0.225))
+                                               ]))
+        else:
+            dataset_train = datasets.ImageNet(args.data_path, split='train',
+                                              transform=transforms.Compose(
+                                                  [transforms.RandomResizedCrop(args.input_size),
+                                                   transforms.RandomHorizontalFlip(),
+                                                   transforms.ToTensor(),
+                                                   transforms.Normalize((0.485, 0.456, 0.406),
+                                                                        (0.229, 0.224, 0.225))]))
+
+            dataset_val = datasets.ImageNet(args.data_path, split='val',
+                                            transform=transforms.Compose([
+                                                transforms.Resize(int(256 / 224 * args.input_size)),
+                                                transforms.CenterCrop(args.input_size),
+                                                transforms.ToTensor(),
+                                                transforms.Normalize((0.485, 0.456, 0.406),
+                                                                     (0.229, 0.224, 0.225))
+                                            ]))
     elif args.dataset == 'mnist':
         dataset_train = datasets.MNIST('~/datasets/mnist', train=True, download=True,
                                        transform=transforms.Compose([transforms.ToTensor(),

@@ -161,13 +161,14 @@ def parse_args():
                         help='Initialize the model via decomposing an uncompressed one')
     parser.add_argument('--ratio', default='2', choices=['1.5', '2', '3', '5', '10'], type=str, help="")
     parser.add_argument('--tt-type', default='general', choices=['general', 'special'], type=str, help="")
-    parser.add_argument('--format', default='', choices=['none', 'tk', 'tt', 'svd'], type=str, help="")
+    parser.add_argument('--format', default='tk', choices=['none', 'tk', 'tt', 'svd'], type=str, help="")
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--log', action='store_true', default=False)
     parser.add_argument('--fp16', action='store_true', default=False)
     parser.add_argument('--timm-loader', action='store_true', default=False)
     parser.add_argument('--work-path', default=None, type=str)
     parser.add_argument('--data-path', default=None, type=str)
+    parser.add_argument('--image-folder', default=False, action='store_true')
 
     args = parser.parse_args()
 
