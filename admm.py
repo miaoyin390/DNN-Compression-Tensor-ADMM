@@ -14,7 +14,6 @@ from ttd import ten2tt, tt2ten
 
 class ADMM:
     def __init__(self, model, rho, hp_dict, format, device, verbose=False, log=False):
-        tl.set_backend('pytorch')
         self.model = model
         self.init_rho = rho
         self.hp_dict = hp_dict
@@ -111,6 +110,7 @@ class ADMM:
         return updated_z
 
     def prune_conv_rank_tk(self, z, name):
+        tl.set_backend('pytorch')
         ranks = self.hp_dict.ranks[name]
         with torch.no_grad():
             core_tensor, (last_factor, first_factor) = partial_tucker(z, modes=[0, 1], rank=ranks, init='svd')
