@@ -80,8 +80,6 @@ def eval(model, args):
 
 @torch.no_grad()
 def eval_runtime(model, args):
-    if args.device == 'cuda':
-        torch.cuda.set_device(f'cuda:{list(args.gpu)[0]}')
 
     device = torch.device(args.device)
     model.to(device)
@@ -114,8 +112,6 @@ def eval_runtime(model, args):
 def train(model, args):
     print(args)
 
-    if args.distributed:
-        utils.init_distributed_mode(args)
 
     if args.distillation_type != 'none' and args.finetune and not args.eval:
         raise NotImplementedError("Finetuning with distillation not yet supported")

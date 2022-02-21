@@ -49,6 +49,11 @@ def main(args):
     else:
         model_dict = dict()
 
+    if args.distributed:
+        utils.init_distributed_mode(args)
+    elif args.device == 'cuda':
+        torch.cuda.set_device(f'cuda:{list(args.gpu)[0]}')
+
     model = timm.create_model(
         args.model,
         pretrained=args.pretrained,
