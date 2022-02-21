@@ -46,7 +46,8 @@ class ADMM:
                 # if 'conv' in name:
                 if len(param.shape) == 4:
                     if self.format == 'tk':
-                        self.z[name].data = torch.from_numpy(self.prune_conv_rank_tk(z, name)).to(self.device)
+                        self.z[name].data = torch.from_numpy(
+                            self.prune_conv_rank_tk(z.detach().cpu().numpy(), name)).to(self.device)
                     elif self.format == 'tt':
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
