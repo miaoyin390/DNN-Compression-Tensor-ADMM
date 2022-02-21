@@ -144,7 +144,7 @@ def parse_args():
 
     # ----------------------------------------------------------------------------------------
     parser.add_argument('--rho', default=0.001, type=float, help="Control the imposing strength of ADMM training")
-    parser.add_argument('--gpus', '--gpu', nargs='+', default=[0, 1], type=int,
+    parser.add_argument('--gpu', '--gpus', nargs='+', default=[0, 1], type=int,
                         help="The GPU(s) on which the model should run. The first GPU will be the main one.")
     parser.add_argument('--distributed', action='store_true', default=False)
     parser.add_argument('--parallel', action='store_true', default=False)
