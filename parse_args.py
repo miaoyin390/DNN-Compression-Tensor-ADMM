@@ -120,7 +120,7 @@ def parse_args():
 
     parser.add_argument('--dataset', default='imagenet', choices=['cifar10', 'cifar100', 'imagenet'],
                         type=str, help='Image Net dataset path')
-    parser.add_argument('--output-dir', default='./saved_models',
+    parser.add_argument('--output-dir', default='saved_models',
                         help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
@@ -166,6 +166,8 @@ def parse_args():
     parser.add_argument('--log', action='store_true', default=False)
     parser.add_argument('--fp16', action='store_true', default=False)
     parser.add_argument('--timm-loader', action='store_true', default=False)
+    parser.add_argument('--work-path', default=None, type=str)
+    parser.add_argument('--data-path', default=None, type=str)
 
     args = parser.parse_args()
 

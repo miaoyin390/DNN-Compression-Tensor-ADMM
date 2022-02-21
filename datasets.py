@@ -171,12 +171,7 @@ def get_data_loader(is_train, args):
                                                                  (0.2675, 0.2565, 0.2761))
                                         ]))
     elif args.dataset == 'imagenet':
-        if os.path.exists('2080.work'):
-            data_path = '/home/miao/datasets/imagenet/'
-        elif os.path.exists('dgx.work'):
-            data_path = '/raid/data/ilsvrc2012/'
-        else:
-            data_path = '/home/datasets/imagenet/'
+
         # train_path = os.path.join(data_path, 'train')
         # data_loader = DataLoader(
         #     datasets.ImageFolder(train_path,
@@ -186,7 +181,7 @@ def get_data_loader(is_train, args):
         #                                                        transforms.Normalize((0.485, 0.456, 0.406),
         #                                                                             (0.229, 0.224, 0.225))])),
         #     batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=args.pin_memrory)
-        dataset_train = datasets.ImageNet(data_path, split='train',
+        dataset_train = datasets.ImageNet(args.data_path, split='train',
                                           transform=transforms.Compose([transforms.RandomResizedCrop(args.input_size),
                                                                         transforms.RandomHorizontalFlip(),
                                                                         transforms.ToTensor(),
@@ -203,7 +198,7 @@ def get_data_loader(is_train, args):
         #                                                   (0.229, 0.224, 0.225))
         #                          ])),
         #     batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=args.pin_memory)
-        dataset_val = datasets.ImageNet(data_path, split='val',
+        dataset_val = datasets.ImageNet(args.data_path, split='val',
                                         transform=transforms.Compose([
                                             transforms.Resize(int(256 / 224 * args.input_size)),
                                             transforms.CenterCrop(args.input_size),

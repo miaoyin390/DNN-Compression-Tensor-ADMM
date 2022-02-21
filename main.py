@@ -5,6 +5,7 @@
 
 import torch
 import timm
+import os
 import numpy as np
 
 import utils
@@ -53,6 +54,28 @@ def main(args):
         utils.init_distributed_mode(args)
     elif args.device == 'cuda':
         torch.cuda.set_device(f'cuda:{list(args.gpu)[0]}')
+
+    if not args.data_path:
+        if os.path.exists('2080.work'):
+            args.data_path = '/home/miao/datasets/imagenet/'
+        elif os.path.exists('dgx.work'):
+            args.data_path = '/raid/data/ilsvrc2012/'
+        elif os.path.exists('bridges2.work'):
+            args.data_path = '/ocean/projects/asc200010p/czhang82/imagenet_tar'
+        else:
+            args.data_path = '/home/datasets/imagenet/'
+
+    if not args.work_path:
+        if os.path.exists('bridges2.work'):
+            args.work_path = '/ocean/projects/asc200010p/czhang82/miaoyin/'
+        else:
+            args.work_path = './'
+
+    if not args.model_path:
+        args.model_path = os.path.join(args.work_path, args.model_path)
+
+    if not args.output_dir:
+        args.output_dir = os.path.join(args.work_path, args.output_dir)
 
     model = timm.create_model(
         args.model,
