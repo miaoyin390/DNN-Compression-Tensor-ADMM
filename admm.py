@@ -33,7 +33,7 @@ class ADMM:
         self.z = {}
 
         for name, param in self.model.named_parameters():
-            if name in self.hp_dict.ranks.keys():
+            if name in self.hp_dict.ranks:
                 self.u[name] = torch.zeros(param.shape).to(device)
                 self.z[name] = torch.Tensor(param.data.cpu().clone().detach()).to(device)
                 if self.log:
@@ -41,12 +41,12 @@ class ADMM:
 
     def update(self, update_u=True):
         for name, param in self.model.named_parameters():
-            if name in self.hp_dict.ranks.keys():
+            if name in self.hp_dict.ranks:
                 z = param.data + self.u[name]
                 # if 'conv' in name:
                 if len(param.shape) == 4:
                     if self.format == 'tk':
-                        self.z[name].data = self.prune_conv_rank_tk(z, name)
+                        self.z[name].data = torch.from_numpy(self.prune_conv_rank_tk(z, name)).to(self.device)
                     elif self.format == 'tt':
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
@@ -78,7 +78,7 @@ class ADMM:
 
     def append_admm_loss(self, loss):
         for name, param in self.model.named_parameters():
-            if name in self.hp_dict.ranks.keys():
+            if name in self.hp_dict.ranks:
                 loss += 0.5 * self.rho * (torch.norm(param - self.z[name] + self.u[name], p=2)) ** 2
                 # dense_loss += 0.5 * rho * p.norm()
         return loss
@@ -110,7 +110,7 @@ class ADMM:
         return updated_z
 
     def prune_conv_rank_tk(self, z, name):
-        tl.set_backend('pytorch')
+        tl.set_backend('numpy')
         ranks = self.hp_dict.ranks[name]
         with torch.no_grad():
             core_tensor, (last_factor, first_factor) = partial_tucker(z, modes=[0, 1], rank=ranks, init='svd')
