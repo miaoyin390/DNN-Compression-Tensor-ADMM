@@ -148,7 +148,8 @@ def train(model, args):
 
     if args.distributed:
         print('*INFO: Distributed training.')
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpus])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=args.local_rank)
+        print([args.gpus])
         model_without_ddp = model.module
     elif args.parallel:
         print('*INFO: Parallel training.')
