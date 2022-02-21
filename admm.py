@@ -14,6 +14,7 @@ from ttd import ten2tt, tt2ten
 
 class ADMM:
     def __init__(self, model, rho, hp_dict, format, device, verbose=False, log=False):
+        tl.set_backend('pytorch')
         self.model = model
         self.init_rho = rho
         self.hp_dict = hp_dict
@@ -46,8 +47,7 @@ class ADMM:
                 # if 'conv' in name:
                 if len(param.shape) == 4:
                     if self.format == 'tk':
-                        self.z[name] = torch.from_numpy(
-                            self.prune_conv_rank_tk(z.detach().cpu().numpy(), name)).to(self.device)
+                        self.z[name].data = self.prune_conv_rank_tk(z, name)
                     elif self.format == 'tt':
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
@@ -111,7 +111,6 @@ class ADMM:
         return updated_z
 
     def prune_conv_rank_tk(self, z, name):
-        tl.set_backend('numpy')
         ranks = self.hp_dict.ranks[name]
         core_tensor, (last_factor, first_factor) = partial_tucker(z, modes=[0, 1], rank=ranks, init='svd')
         updated_z = tl.tucker_to_tensor((core_tensor, (last_factor, first_factor)))
