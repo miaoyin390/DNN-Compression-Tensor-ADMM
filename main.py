@@ -71,10 +71,10 @@ def main(args):
         else:
             args.work_path = './'
 
-    if not args.model_path:
+    if args.model_path:
         args.model_path = os.path.join(args.work_path, args.model_path)
 
-    if not args.output_dir:
+    if args.output_dir:
         args.output_dir = os.path.join(args.work_path, args.output_dir)
 
     model = timm.create_model(
