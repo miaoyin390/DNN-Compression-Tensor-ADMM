@@ -112,7 +112,6 @@ def eval_runtime(model, args):
 def train(model, args):
     print(args)
 
-
     if args.distillation_type != 'none' and args.finetune and not args.eval:
         raise NotImplementedError("Finetuning with distillation not yet supported")
 
@@ -154,7 +153,6 @@ def train(model, args):
     if args.distributed:
         print('*INFO: Distributed training.')
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        print([args.gpu])
         model_without_ddp = model.module
     elif args.parallel:
         print('*INFO: Parallel training.')

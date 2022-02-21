@@ -111,16 +111,14 @@ class TKConv2dC(Module):
         compr_params = (self.first_kernel.numel() + self.core_kernel.numel() +
                         self.last_kernel.numel()) / 1000
         compr_flops = 0
-        out = F.conv2d(x, self.first_kernel, None, self.stride,
-                       self.padding, self.dilation, self.groups)
+        out = F.conv2d(x, self.first_kernel, None)
         _, _, height_, width_ = out.shape
         compr_flops += height_ * width_ * self.first_kernel.numel() / 1000 / 1000
         out = F.conv2d(out, self.core_kernel, None, self.stride,
                        self.padding, self.dilation, self.groups)
         _, _, height_, width_ = out.shape
         compr_flops += height_ * width_ * self.core_kernel.numel() / 1000 / 1000
-        out = F.conv2d(out, self.last_kernel, self.bias, self.stride,
-                       self.padding, self.dilation, self.groups)
+        out = F.conv2d(out, self.last_kernel, self.bias)
         _, _, height_, width_ = out.shape
         compr_flops += height_ * width_ * self.last_kernel.numel() / 1000 / 1000
 

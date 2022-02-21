@@ -560,7 +560,7 @@ def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 if __name__ == '__main__':
     baseline = 'resnet18'
     model_name = 'tkc_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, '2', tt_type='general')
+    hp_dict = utils.get_hp_dict(model_name, ratio='2', tt_type='general')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=True, pretrained=True)
     compr_params = 0
     for name, p in model.named_parameters():
@@ -569,20 +569,20 @@ if __name__ == '__main__':
         if p.requires_grad:
             compr_params += int(np.prod(p.shape))
 
-    x = torch.randn(256, 3, 224, 224)
+    x = torch.randn(1, 3, 224, 224)
     _ = model(x)
     print(compr_params)
-    # _, compr_flops, base_flops = model.forward_flops(x)
-    # base_params = 0
-    # model = timm.create_model(baseline)
-    # for name, p in model.named_parameters():
-    #     # if 'conv' in name or 'fc' in name:
-    #     # print(name, p.shape)
-    #     if p.requires_grad:
-    #         base_params += int(np.prod(p.shape))
-    # print('Baseline # parameters: {}'.format(base_params))
-    # print('Compressed # parameters: {}'.format(compr_params))
-    # print('Compression ratio: {:.3f}'.format(base_params / compr_params))
-    # print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
-    # print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
-    # print('FLOPs ratio: {:.3f}'.format(base_flops / compr_flops))
+    _, compr_flops, base_flops = model.forward_flops(x)
+    base_params = 0
+    model = timm.create_model(baseline)
+    for name, p in model.named_parameters():
+        # if 'conv' in name or 'fc' in name:
+        # print(name, p.shape)
+        if p.requires_grad:
+            base_params += int(np.prod(p.shape))
+    print('Baseline # parameters: {}'.format(base_params))
+    print('Compressed # parameters: {}'.format(compr_params))
+    print('Compression ratio: {:.3f}'.format(base_params / compr_params))
+    print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
+    print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
+    print('FLOPs ratio: {:.3f}'.format(base_flops / compr_flops))
