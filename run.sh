@@ -23,7 +23,7 @@ sourceDir=/ocean/projects/asc200010p/czhang82/imagenet_tar
 destDir=$LOCAL/imagenet
 while [[ $RC -ne 0 && $n -lt 20 ]]; do
     echo 'copy dataset to' $destDir
-    rsync -avP $sourceDir $destDir
+    rsync -avP $sourceDir/* $destDir
     RC=$?
     n=$(( $n + 1 ))
     # let n = n + 1
