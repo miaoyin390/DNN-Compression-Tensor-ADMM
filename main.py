@@ -61,7 +61,8 @@ def main(args):
         elif os.path.exists('dgx.work'):
             args.data_path = '/raid/data/ilsvrc2012/'
         elif os.path.exists('bridges2.work'):
-            args.data_path = '/ocean/projects/asc200010p/czhang82/imagenet'
+            # args.data_path = '/ocean/projects/asc200010p/czhang82/imagenet'
+            args.data_path = '/local/imagenet'
             args.image_folder = True
         else:
             args.data_path = '/home/datasets/imagenet/'

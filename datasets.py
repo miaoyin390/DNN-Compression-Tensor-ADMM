@@ -182,8 +182,8 @@ def get_data_loader(is_train, args):
                                                       transforms.Normalize((0.485, 0.456, 0.406),
                                                                            (0.229, 0.224, 0.225))]))
 
-            test_path = os.path.join(args.data_path, 'val')
-            dataset_val = datasets.ImageFolder(test_path,
+            val_path = os.path.join(args.data_path, 'val')
+            dataset_val = datasets.ImageFolder(val_path,
                                                transform=transforms.Compose([
                                                    transforms.Resize(int(256 / 224 * args.input_size)),
                                                    transforms.CenterCrop(args.input_size),
