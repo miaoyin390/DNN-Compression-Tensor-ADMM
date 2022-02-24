@@ -63,13 +63,13 @@ def main(args):
         elif os.path.exists('bridges2.work'):
             # args.data_path = '/ocean/projects/asc200010p/czhang82/imagenet'
             args.data_path = '/local/imagenet'
-            args.image_folder = True
         else:
             args.data_path = '/home/datasets/imagenet/'
 
     if not args.work_path:
         if os.path.exists('bridges2.work'):
             args.work_path = '/ocean/projects/asc200010p/czhang82/miaoyin/'
+            args.image_folder = True
         else:
             args.work_path = './'
 
