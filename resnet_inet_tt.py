@@ -125,7 +125,7 @@ class TTBasicBlock(nn.Module):
         else:
             out = self.conv1(x)
             base_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
-            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
         out = self.bn1(out)
         out = self.relu(out)
 
@@ -135,7 +135,7 @@ class TTBasicBlock(nn.Module):
             base_flops += flops1
             compr_flops += flops2
         else:
-            out = self.conv2(x)
+            out = self.conv2(out)
             base_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
             compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
         out = self.bn2(out)
@@ -231,6 +231,53 @@ class TTBottleneck(nn.Module):
         out = self.relu(out)
 
         return out
+
+    def forward_flops(self, x, name):
+        identity = x
+        base_flops = 0
+        compr_flops = 0
+
+        print('>{}:'.format(name + 'conv1'))
+        if isinstance(self.conv1, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv1.forward_flops(x)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv1(x)
+            base_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv1.weight.numel() / 1000 / 1000
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        print('>{}:'.format(name + 'conv2'))
+        if isinstance(self.conv2, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv2.forward_flops(out)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv2(out)
+            base_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        print('>{}:'.format(name + 'conv3'))
+        if isinstance(self.conv3, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
+            out, flops1, flops2 = self.conv3.forward_flops(out)
+            base_flops += flops1
+            compr_flops += flops2
+        else:
+            out = self.conv3(out)
+            base_flops += out.shape[2] * out.shape[3] * self.conv3.weight.numel() / 1000 / 1000
+            compr_flops += out.shape[2] * out.shape[3] * self.conv3.weight.numel() / 1000 / 1000
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+        return out, base_flops, compr_flops
 
 
 class TTResNet(nn.Module):
@@ -558,7 +605,7 @@ def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 
 if __name__ == '__main__':
-    baseline = 'resnet18'
+    baseline = 'resnet50'
     model_name = 'tkc_' + baseline
     hp_dict = utils.get_hp_dict(model_name, ratio='sc', tt_type='general')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=True, pretrained=True)
