@@ -258,7 +258,7 @@ class TTBottleneck(nn.Module):
             out = self.conv2(out)
             base_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
             compr_flops += out.shape[2] * out.shape[3] * self.conv2.weight.numel() / 1000 / 1000
-        out = self.bn1(out)
+        out = self.bn2(out)
         out = self.relu(out)
 
         print('>{}:'.format(name + 'conv3'))
