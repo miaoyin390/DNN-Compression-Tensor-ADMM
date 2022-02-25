@@ -110,7 +110,8 @@ def eval_runtime(model, args):
 
 
 def train(model, args):
-    print(args)
+    if utils.get_rank() == 0:
+        print(args)
 
     if args.distillation_type != 'none' and args.finetune and not args.eval:
         raise NotImplementedError("Finetuning with distillation not yet supported")
