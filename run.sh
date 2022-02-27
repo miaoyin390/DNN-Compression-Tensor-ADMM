@@ -8,6 +8,10 @@
 
 #CUDA_VISIBLE_DEVICES=0,1 nohup python -m torch.distributed.launch --nproc_per_node 2 python main.py  --model ttr_resnet50 --decompose --model-path ./saved_models/resnet50_imagenet_admm_tt_1028-215851_model.pt --ratio 3 --format tt --tt-type general --sched step --decay-epochs 30 --decay-rate 0.2 --lr 0.001 --epochs 105 --save-log --save-model --gpus 0 --fp16 --num-workers 24 > r50-tt-general-ft-1.log &
 
-#python -m torch.distributed.launch --nproc_per_node 4 main.py --model resnet18 --ratio 2 --admm --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --smoothing 0.1 --distributed --save-log --save-model
+#python -m torch.distributed.launch --nproc_per_node 4 main.py --model resnet18 --ratio 2 --admm --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
 
-python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet50 --ratio 3 --admm --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --smoothing 0.1 --distributed --save-log --save-model
+#python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet18 --ratio 2 --decompose --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
+
+#python -m torch.distributed.launch --nproc_per_node 4 main.py --model resnet50 --ratio 3 --admm --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
+
+python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet50 --ratio 3 --decompose --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
