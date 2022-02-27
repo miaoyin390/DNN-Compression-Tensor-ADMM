@@ -66,11 +66,9 @@ def evaluate(data_loader, model, device, print_freq=100):
 
 
 def eval(model, args):
-    if args.device == 'cuda':
-        torch.cuda.set_device(f'cuda:{list(args.gpu)[0]}')
-
     device = torch.device(args.device)
     model.to(device)
+
     if args.timm_loader:
         val_loader = get_val_loader(args)
     else:
@@ -80,9 +78,9 @@ def eval(model, args):
 
 @torch.no_grad()
 def eval_runtime(model, args):
-
     device = torch.device(args.device)
     model.to(device)
+
     if args.timm_loader:
         val_loader = get_val_loader(args)
     else:
