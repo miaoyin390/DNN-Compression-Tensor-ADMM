@@ -80,7 +80,7 @@ def main(args):
     if args.output_dir:
         args.output_dir = os.path.join(args.work_path, args.output_dir)
 
-    if args.model == 'resnet50' and args.torchvision:
+    if args.model == 'resnet50':
         model = torchvision.models.resnet50(pretrained=args.pretrained)
     else:
         model = timm.create_model(
