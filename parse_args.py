@@ -169,7 +169,7 @@ def parse_args():
     parser.add_argument('--work-path', default=None, type=str)
     parser.add_argument('--data-path', default=None, type=str)
     parser.add_argument('--image-folder', default=False, action='store_true')
-    parser.add_argument('--torchvision', default=False, action='store_true')
+    parser.add_argument('--torchvision', default=True, action='store_true')
 
     args = parser.parse_args()
 
