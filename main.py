@@ -7,6 +7,7 @@ import torch
 import timm
 import os
 import numpy as np
+import torchvision.models
 
 import utils
 from engines import train, eval, eval_runtime
@@ -79,15 +80,18 @@ def main(args):
     if args.output_dir:
         args.output_dir = os.path.join(args.work_path, args.output_dir)
 
-    model = timm.create_model(
-        args.model,
-        pretrained=args.pretrained,
-        num_classes=args.num_classes,
-        decompose=args.decompose,
-        path=args.model_path,
-        hp_dict=hp_dict,
-        **model_dict
-    )
+    if args.model == 'resnet50' and args.torchvision:
+        model = torchvision.models.resnet50(pretrained=args.pretrained)
+    else:
+        model = timm.create_model(
+            args.model,
+            pretrained=args.pretrained,
+            num_classes=args.num_classes,
+            decompose=args.decompose,
+            path=args.model_path,
+            hp_dict=hp_dict,
+            **model_dict
+        )
 
     # Evaluation
     if args.runtime:
