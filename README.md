@@ -30,8 +30,8 @@
 | DeiT-tiny-TT-ADMM      |   71.68   | 90.28 | 30\%  |                    lr=0.01, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard'                     |
 | DeiT-tiny-TT-FT        |   72.61   | 90.86 | 30\%  |                    lr=0.001, epochs=100, optimizer=momentum, scheduler=cosine, distillation='hard'                    |
 | DeitT-small-baseline   |   79.90   |  |       |                                                                                                                       |
-| Deit-small-TT-ADMM     |   78.81   | 94.30 |       | lr=0.01, epochs=400, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1  |
-| Deit-small-TT-FT       |       |      | 40\%  | lr=0.002, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1 |
+| Deit-small-TT-ADMM     |   78.81   | 94.30 | 35\%  | lr=0.01, epochs=400, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1  |
+| Deit-small-TT-FT       |   79.07   | 94.53 | 35\%  | lr=0.002, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1 |
 | Mobilenetv2-baseline   |  71.80  |        |       |                                                                                                                         |
 | Mobilenetv2-SVD-ADMM   |   70.03   | 89.17 |       |             lr=0.05, epochs=180, optimizer=momentum, scheduler=cosine, distillation='hard', smoothing=0.1             |
 | Mobilenetv2-SVD-FT     | 69.94 | 89.16 | 30\%  |            lr=0.005, epochs=180, optimizer=momentum, scheduler=cosine, distillation='hard', smoothing=0.1                 |
