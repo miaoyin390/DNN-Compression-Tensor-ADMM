@@ -51,10 +51,6 @@ def main(args):
     else:
         model_dict = dict()
 
-    if args.distributed:
-        utils.init_distributed_mode(args)
-    elif args.device == 'cuda':
-        torch.cuda.set_device(f'cuda:{list(args.gpu)[0]}')
 
     if not args.data_path:
         if os.path.exists('2080.work'):
@@ -98,6 +94,11 @@ def main(args):
         model_path = args.model_path.split('.')[0] + 'full.pt'
         torch.save(model, model_path)
         return
+
+    if args.distributed:
+        utils.init_distributed_mode(args)
+    elif args.device == 'cuda':
+        torch.cuda.set_device(f'cuda:{list(args.gpu)[0]}')
 
     # Evaluation
     if args.runtime:
