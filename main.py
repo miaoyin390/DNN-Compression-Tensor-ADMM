@@ -93,6 +93,12 @@ def main(args):
             **model_dict
         )
 
+    if args.convert:
+        print('Convert state_dict to full model file')
+        model_path = args.model_path.split('.')[0] + 'full.pt'
+        torch.save(model, model_path)
+        return
+
     # Evaluation
     if args.runtime:
         print('===== Runtime Mode =====')
