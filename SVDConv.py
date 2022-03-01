@@ -183,7 +183,7 @@ class SVDConv2dC(Module):
         init.xavier_uniform_(self.right_kernel)
 
     def forward(self, x):
-        out = F.conv2d(x, self.right_kernel, None, self.stride,
+        out = F.conv2d(x, self.right_kernel, None, 1,
                        self.padding, self.dilation, self.groups)
         out = F.conv2d(out, self.left_kernel, self.bias, self.stride,
                        self.padding, self.dilation, self.groups)
