@@ -51,7 +51,6 @@ def main(args):
     else:
         model_dict = dict()
 
-
     if not args.data_path:
         if os.path.exists('2080.work'):
             args.data_path = '/home/miao/datasets/imagenet/'
