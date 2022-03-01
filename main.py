@@ -26,8 +26,6 @@ import densenet_cifar_tt
 
 
 def main(args):
-    print(f"Creating model: {args.model}")
-
     if args.admm and (args.decompose or 'tt' in args.model or 'tk' in args.model):
         raise Exception('ERROR: ADMM mode does not support decomposed model!')
 
@@ -75,6 +73,7 @@ def main(args):
     if args.output_dir:
         args.output_dir = os.path.join(args.work_path, args.output_dir)
 
+    print('Creating model: {}'.format(args.model))
     if args.model == 'resnet50':
         model = torchvision.models.resnet50(pretrained=args.pretrained)
     else:
