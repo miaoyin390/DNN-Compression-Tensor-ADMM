@@ -90,7 +90,7 @@ def main(args):
 
     if args.convert_full:
         print('Convert state_dict to full model file')
-        model_path = args.model_path.split('.')[0] + 'full.pt'
+        model_path = args.model_path.split('.')[0] + '_full.pt'
         torch.save(model, model_path)
         return
 
