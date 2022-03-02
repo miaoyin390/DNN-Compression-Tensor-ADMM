@@ -87,6 +87,9 @@ def main(args):
             **model_dict
         )
 
+    if args.model_info:
+        print(model)
+
     if args.convert_full:
         print('Convert state_dict to full model file')
         model_path = args.model_path.split('.')[0] + '_full.pt'
