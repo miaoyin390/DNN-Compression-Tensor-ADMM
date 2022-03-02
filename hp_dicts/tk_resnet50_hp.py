@@ -6,7 +6,7 @@
 
 class HyperParamsDictRatio3x:
     ranks = {
-        'layer1.0.conv2.weight': [32, 32],
+        'layer1.0.conv2.weight': [32, 64],
         'layer1.1.conv2.weight': [32, 32],
         'layer1.2.conv2.weight': [32, 32],
         'layer2.0.conv2.weight': [64, 64],
@@ -23,13 +23,13 @@ class HyperParamsDictRatio3x:
         'layer4.1.conv2.weight': [64, 96],
         'layer4.2.conv2.weight': [64, 96],
 
-        'layer1.0.conv1.weight': [32, 32],
-        'layer1.1.conv1.weight': [32, 32],
-        'layer1.2.conv1.weight': [32, 32],
-        'layer1.0.conv3.weight': [32, 32],
-        'layer1.1.conv3.weight': [32, 32],
-        'layer1.2.conv3.weight': [32, 32],
-
+        # 'layer1.0.conv1.weight': [32, 32],
+        # 'layer1.1.conv1.weight': [32, 32],
+        # 'layer1.2.conv1.weight': [32, 32],
+        # 'layer1.0.conv3.weight': [32, 32],
+        # 'layer1.1.conv3.weight': [32, 32],
+        # 'layer1.2.conv3.weight': [32, 32],
+        #
         'layer2.0.conv1.weight': [32, 64],
         'layer2.1.conv1.weight': [32, 64],
         'layer2.2.conv1.weight': [32, 64],
@@ -62,7 +62,7 @@ class HyperParamsDictRatio3x:
 
 class HyperParamsDictSC:
     ranks = {
-        'layer1.0.conv2.weight': [32, 32],
+        'layer1.0.conv2.weight': [32, 64],
         'layer1.1.conv2.weight': [32, 32],
         'layer1.2.conv2.weight': [32, 32],
         'layer2.0.conv2.weight': [32, 32],
