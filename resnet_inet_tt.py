@@ -612,8 +612,8 @@ def tkm_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         if pretrained:
-            # dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
-            dense_dict = torchvision.models.resnet50(pretrained=True).state_dict()
+            dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
+            # dense_dict = torchvision.models.resnet50(pretrained=True).state_dict()
         else:
             dense_dict = torch.load(path, map_location='cpu')
     else:
