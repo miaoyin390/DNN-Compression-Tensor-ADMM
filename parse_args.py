@@ -170,7 +170,6 @@ def parse_args():
     parser.add_argument('--data-path', default=None, type=str)
     parser.add_argument('--image-folder', default=False, action='store_true')
     parser.add_argument('--torchvision', default=False, action='store_true')
-    parser.add_argument('--convert-full', default=False, action='store_true')
     parser.add_argument('--model-info', default=False, action='store_true')
 
     args = parser.parse_args()
