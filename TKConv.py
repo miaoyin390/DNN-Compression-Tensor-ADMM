@@ -127,9 +127,20 @@ class TKConv2dC(Module):
                      self.in_channels * self.out_channels / 1000 / 1000
 
         print('baseline # params: {:.2f}K\t compressed # params: {:.2f}K\t '
-              'baseline # flops: {:.2f}M\t compressed # flops: {:.2f}M'.format(base_params, compr_params, base_flops, compr_flops))
+              'baseline # flops: {:.2f}M\t compressed # flops: {:.2f}M'.format(base_params, compr_params, base_flops,
+                                                                               compr_flops))
 
         return out, base_flops, compr_flops
+
+    def extra_repr(self):
+        s = 'first_conv(in={}, out={}, kernel_size=(1, 1), bias=False), ' \
+            'core_conv(in={}, out={}, kernel_size={}, stride={}, padding={}, bias={}), ' \
+            'last_conv(in={}, out={}, kernel_size=(1, 1), bias=False)'.format(
+            self.in_channels, self.in_rank,
+            self.in_rank, self.out_rank, self.kernel_size,
+            self.stride, self.padding, self.bias is None,
+            self.out_rank, self.out_channels)
+        return s
 
 
 class TKConv2dM(Module):
@@ -267,7 +278,8 @@ class TKConv2dR(Module):
         self.filter_dim = int(self.kernel_shape[2] * self.kernel_shape[3])
 
         self.first_factor = Parameter(torch.Tensor(self.in_rank, in_channels))
-        self.core_tensor = Parameter(torch.Tensor(self.out_rank, self.in_rank, self.kernel_shape[2], self.kernel_shape[3]))
+        self.core_tensor = Parameter(
+            torch.Tensor(self.out_rank, self.in_rank, self.kernel_shape[2], self.kernel_shape[3]))
         self.last_factor = Parameter(torch.Tensor(out_channels, self.out_rank))
 
         if bias:
