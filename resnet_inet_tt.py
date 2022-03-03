@@ -14,6 +14,7 @@ from typing import Type, Any, Callable, Union, List, Optional, Tuple
 
 from TTConv import TTConv2dM, TTConv2dR
 from TKConv import TKConv2dM, TKConv2dR, TKConv2dC
+from SVDConv import SVDConv2dC, SVDConv2dM, SVDConv2dR
 from timm.models.registry import register_model
 import timm
 
@@ -44,8 +45,12 @@ def tt_conv1x1(in_planes: int, out_planes: int, stride: int = 1,
                conv: Type[Union[TTConv2dR, TTConv2dM, TKConv2dM, TKConv2dC, TKConv2dR]] = TTConv2dR,
                hp_dict=None, name=None, dense_w: Optional = None):
     """1x1 convolution"""
-    return conv(in_planes, out_planes, kernel_size=1, stride=stride, bias=False,
-                hp_dict=hp_dict, name=name, dense_w=dense_w)
+    if len(hp_dict.ranks[name]) == 1:
+        return SVDConv2dC(in_planes, out_planes, kernel_size=1, stride=stride, bias=False,
+                          hp_dict=hp_dict, name=name, dense_w=dense_w)
+    else:
+        return conv(in_planes, out_planes, kernel_size=1, stride=stride, bias=False,
+                    hp_dict=hp_dict, name=name, dense_w=dense_w)
 
 
 class TTBasicBlock(nn.Module):
@@ -240,7 +245,7 @@ class TTBottleneck(nn.Module):
         compr_flops = 0
 
         print('>{}:'.format(name + 'conv1'))
-        if isinstance(self.conv1, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
+        if isinstance(self.conv1, (TTConv2dM, TKConv2dC, TKConv2dM, SVDConv2dC, SVDConv2dM)):
             out, flops1, flops2 = self.conv1.forward_flops(x)
             base_flops += flops1
             compr_flops += flops2
@@ -252,7 +257,7 @@ class TTBottleneck(nn.Module):
         out = self.relu(out)
 
         print('>{}:'.format(name + 'conv2'))
-        if isinstance(self.conv2, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
+        if isinstance(self.conv2, (TTConv2dM, TKConv2dC, TKConv2dM, SVDConv2dC, SVDConv2dM)):
             out, flops1, flops2 = self.conv2.forward_flops(out)
             base_flops += flops1
             compr_flops += flops2
@@ -264,7 +269,7 @@ class TTBottleneck(nn.Module):
         out = self.relu(out)
 
         print('>{}:'.format(name + 'conv3'))
-        if isinstance(self.conv3, (TTConv2dM, TTConv2dR, TKConv2dC, TKConv2dM, TKConv2dR)):
+        if isinstance(self.conv3, (TTConv2dM, TKConv2dC, TKConv2dM, SVDConv2dC, SVDConv2dM)):
             out, flops1, flops2 = self.conv3.forward_flops(out)
             base_flops += flops1
             compr_flops += flops2
@@ -578,8 +583,8 @@ def tkr_resnet34(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 def tkr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         if pretrained:
-            # dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
-            dense_dict = torchvision.models.resnet50(pretrained=True).state_dict()
+            dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
+            # dense_dict = torchvision.models.resnet50(pretrained=True).state_dict()
         else:
             dense_dict = torch.load(path, map_location='cpu')
     else:
@@ -595,8 +600,8 @@ def tkr_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 def tkm_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         if pretrained:
-            # dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
-            dense_dict = torchvision.models.resnet50(pretrained=True).state_dict()
+            dense_dict = timm.create_model('resnet50', pretrained=True).state_dict()
+            # dense_dict = torchvision.models.resnet50(pretrained=True).state_dict()
         else:
             dense_dict = torch.load(path, map_location='cpu')
     else:

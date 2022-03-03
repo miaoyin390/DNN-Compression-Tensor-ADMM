@@ -49,7 +49,8 @@ class SVDConv2dR(Module):
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.rank = hp_dict.ranks[name]
+        self.ranks = hp_dict.ranks[name]
+        self.rank = self.ranks if isinstance(self.ranks, int) else self.ranks[0]
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
         if out_channels % groups != 0:
@@ -129,9 +130,24 @@ class SVDConv2dC(Module):
                  dense_w=None, dense_b=None):
         super(SVDConv2dC, self).__init__()
 
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+
+        if padding_mode != 'zeros':
+            raise ValueError("padding_mode must be zero in this mode")
+        if groups != 1:
+            raise ValueError("groups must be 1 in this mode")
+        if kernel_size[0] * kernel_size[1] != 1:
+            raise ValueError('kernel_size must be 1 in this mode')
+        if stride[0] * stride[1] != 1:
+            raise ValueError('stride must be 1')
+
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.rank = hp_dict.ranks[name]
+        self.ranks = hp_dict.ranks[name]
+        self.rank = self.ranks if isinstance(self.ranks, int) else self.ranks[0]
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
@@ -141,14 +157,6 @@ class SVDConv2dC(Module):
         self.groups = groups
         self.padding_mode = padding_mode
 
-        if padding_mode != 'zeros':
-            raise ValueError("padding_mode must be zero in this mode")
-        if groups != 1:
-            raise ValueError("groups must be 1 in this mode")
-        if kernel_size != 1:
-            raise ValueError('kernel_size must be 1 in this mode')
-        if stride != 1:
-            raise ValueError('stride must be 1')
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
@@ -157,8 +165,8 @@ class SVDConv2dC(Module):
         else:
             self.register_parameter('bias', None)
 
-        self.left_kernel = Parameter(torch.Tensor(self.rank, self.in_channels, 1, 1))
-        self.right_kernel = Parameter(torch.Tensor(self.out_channels, self.rank, 1, 1))
+        self.left_kernel = Parameter(torch.Tensor(self.rank, self.in_channels, *self.kernel_size))
+        self.right_kernel = Parameter(torch.Tensor(self.out_channels, self.rank, *self.kernel_size))
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
@@ -172,8 +180,8 @@ class SVDConv2dC(Module):
             u = u[:, :self.rank]
             s = s[:self.rank]
             v = v[:self.rank, :]
-            self.left_kernel.data = torch.from_numpy(u).unsqueeze(-1).unsqueeze(-1)
-            self.right_kernel.data = torch.from_numpy(np.diag(s) @ v).unsqueeze(-1).unsqueeze(-1)
+            self.right_kernel.data = torch.from_numpy(u).unsqueeze(-1).unsqueeze(-1)
+            self.left_kernel.data = torch.from_numpy(np.diag(s) @ v).unsqueeze(-1).unsqueeze(-1)
 
         else:
             self.reset_parameters()
@@ -183,11 +191,40 @@ class SVDConv2dC(Module):
         init.xavier_uniform_(self.right_kernel)
 
     def forward(self, x):
-        out = F.conv2d(x, self.right_kernel, None, 1,
-                       self.padding, self.dilation, self.groups)
-        out = F.conv2d(out, self.left_kernel, self.bias, self.stride,
+        out = F.conv2d(x, self.left_kernel, None)
+        out = F.conv2d(out, self.right_kernel, self.bias, self.stride,
                        self.padding, self.dilation, self.groups)
         return out
+
+    def forward_flops(self, x):
+        compr_params = (self.left_kernel.numel() + self.right_kernel.numel()) / 1000
+        compr_flops = 0
+        out = F.conv2d(x, self.left_kernel, None)
+        _, _, height_, width_ = out.shape
+        compr_flops += height_ * width_ * self.left_kernel.numel() / 1000 / 1000
+
+        out = F.conv2d(out, self.right_kernel, self.bias, self.stride,
+                       self.padding, self.dilation, self.groups)
+        _, _, height_, width_ = out.shape
+        compr_flops += height_ * width_ * self.right_kernel.numel() / 1000 / 1000
+
+        base_params = self.kernel_size[0] * self.kernel_size[1] * self.in_channels * self.out_channels / 1000
+        base_flops = height_ * width_ * self.kernel_size[0] * self.kernel_size[1] * \
+                     self.in_channels * self.out_channels / 1000 / 1000
+
+        print('baseline # params: {:.2f}K\t compressed # params: {:.2f}K\t '
+              'baseline # flops: {:.2f}M\t compressed # flops: {:.2f}M'.format(base_params, compr_params, base_flops,
+                                                                               compr_flops))
+
+        return out, base_flops, compr_flops
+
+    def extra_repr(self) -> str:
+        s = 'left_conv(in={}, out={}, kernel_size=(1, 1), bias=False), ' \
+            'right_conv(in={}, out={}, kernel_size={}, stride={}, padding={}, bias={}), ' \
+            .format(self.in_channels, self.rank,
+                    self.rank, self.out_channels, self.kernel_size,
+                    self.stride, self.padding, self.bias is None)
+        return s
 
 
 class SVDConv2dM(Module):
@@ -197,10 +234,24 @@ class SVDConv2dM(Module):
                  hp_dict=None, name=str,
                  dense_w=None, dense_b=None):
         super(SVDConv2dM, self).__init__()
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+
+        if padding_mode != 'zeros':
+            raise ValueError("padding_mode must be zero in this mode")
+        if groups != 1:
+            raise ValueError("groups must be 1 in this mode")
+        if kernel_size[0] * kernel_size[1] != 1:
+            raise ValueError('kernel_size must be 1 in this mode')
+        if stride[0] * stride[1] != 1:
+            raise ValueError('stride must be 1')
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.rank = hp_dict.ranks[name]
+        self.ranks = hp_dict.ranks[name]
+        self.rank = self.ranks if isinstance(self.ranks, int) else self.ranks[0]
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
@@ -209,15 +260,6 @@ class SVDConv2dM(Module):
         self.output_padding = _pair(0)
         self.groups = groups
         self.padding_mode = padding_mode
-
-        if padding_mode != 'zeros':
-            raise ValueError("padding_mode must be zero in this mode")
-        if groups != 1:
-            raise ValueError("groups must be 1 in this mode")
-        if kernel_size != 1:
-            raise ValueError('kernel_size must be 1 in this mode')
-        if stride != 1:
-            raise ValueError('stride must be 1')
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))
@@ -241,8 +283,8 @@ class SVDConv2dM(Module):
             u = u[:, :self.rank]
             s = s[:self.rank]
             v = v[:self.rank, :]
-            self.left_factor.data = torch.from_numpy(u)
-            self.right_factor.data = torch.from_numpy(np.diag(s) @ v)
+            self.right_factor.data = torch.from_numpy(u)
+            self.left_factor.data = torch.from_numpy(np.diag(s) @ v)
 
         else:
             self.reset_parameters()
@@ -252,6 +294,6 @@ class SVDConv2dM(Module):
         init.xavier_uniform_(self.right_factor)
 
     def forward(self, x):
-        out = F.linear(x.permute(0, 2, 3, 1), self.right_factor)
-        out = F.linear(out, self.left_factor, self.bias).permute(0, 3, 1, 2)
+        out = F.linear(x.permute(0, 2, 3, 1), self.left_factor)
+        out = F.linear(out, self.right_factor, self.bias).permute(0, 3, 1, 2)
         return out

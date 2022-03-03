@@ -99,11 +99,12 @@ class TKConv2dC(Module):
 
     def forward_features(self, x):
         features = []
-        out = self.first_conv(x)
+        out = F.conv2d(x, self.first_kernel)
         features.append(out)
-        out = self.core_conv(out)
+        out = F.conv2d(out, self.core_kernel, None, self.stride,
+                       self.padding, self.dilation, self.groups)
         features.append(out)
-        out = self.last_conv(out)
+        out = F.conv2d(out, self.last_kernel, self.bias)
         features.append(out)
         return out, features
 
@@ -135,11 +136,11 @@ class TKConv2dC(Module):
     def extra_repr(self):
         s = 'first_conv(in={}, out={}, kernel_size=(1, 1), bias=False), ' \
             'core_conv(in={}, out={}, kernel_size={}, stride={}, padding={}, bias={}), ' \
-            'last_conv(in={}, out={}, kernel_size=(1, 1), bias=False)'.format(
-            self.in_channels, self.in_rank,
-            self.in_rank, self.out_rank, self.kernel_size,
-            self.stride, self.padding, self.bias is None,
-            self.out_rank, self.out_channels)
+            'last_conv(in={}, out={}, kernel_size=(1, 1), bias=False)' \
+            .format(self.in_channels, self.in_rank,
+                    self.in_rank, self.out_rank, self.kernel_size,
+                    self.stride, self.padding, self.bias is None,
+                    self.out_rank, self.out_channels)
         return s
 
 
