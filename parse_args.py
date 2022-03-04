@@ -171,6 +171,7 @@ def parse_args():
     parser.add_argument('--image-folder', default=False, action='store_true')
     parser.add_argument('--torchvision', default=False, action='store_true')
     parser.add_argument('--model-info', default=False, action='store_true')
+    parser.add_argument('--reload-path', default=None, type=str)
 
     args = parser.parse_args()
 

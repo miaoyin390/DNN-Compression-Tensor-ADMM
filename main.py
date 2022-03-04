@@ -87,6 +87,10 @@ def main(args):
             **model_dict
         )
 
+    if args.reload_path:
+        print('*INFO: Reload model from local path {}.'.format(args.reload_path))
+        model.load_state_dict(torch.load(args.reload_path, map_location='cpu'))
+
     if args.model_info:
         print(model)
         return
