@@ -9,6 +9,7 @@ import time
 from collections import defaultdict, deque
 import datetime
 import math
+import re
 
 import torch
 import torch.distributed as dist
@@ -254,31 +255,26 @@ def normal_adjust_lr(optimizer, init_lr, epoch, epochs, base=0.2):
     return lr
 
 
-def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
-    if 'tk' in model_name:
-        format = 'tk'
-    elif 'tt' in model_name:
-        format = 'tt'
-    elif 'svd' in model_name:
-        format = 'svd'
-    else:
-        pass
-    if 'tk' in format and 'deit_tiny_patch16_224' in model_name:
+def get_hp_dict(model_name, ratio, format='tk', tt_type='general'):
+    match = re.match(r'(tk|tt|svd)?[crm]?_?(.+)', model_name)
+    if match.group(1):
+        format, model_name = match.group(1), match.group(2)
+    if 'tk' == format and 'deit_tiny_patch16_224' == model_name:
         if ratio == '2':
             from hp_dicts.tk_deit_tiny_patch16_224_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'deit_tiny_patch16_224' in model_name:
+    elif 'tt' == format and 'deit_tiny_patch16_224' == model_name:
         if ratio == '2':
             from hp_dicts.tt_deit_tiny_patch16_224_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'deit_small_patch16_224' in model_name:
+    elif 'tt' == format and 'deit_small_patch16_224' == model_name:
         if ratio == '2':
             from hp_dicts.tt_deit_small_patch16_224_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'resnet32' in model_name:
+    elif 'tk' == format and 'resnet32' == model_name:
         if ratio == '1.5':
             from hp_dicts.tk_resnet32_hp import HyperParamsDictRatio1p5x as hp_dict
         elif ratio == '2':
@@ -289,49 +285,49 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
             from hp_dicts.tk_resnet32_hp import HyperParamsDictRatio5x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'resnet32' in model_name:
+    elif 'tt' == format and 'resnet32' == model_name:
         if ratio == '3':
             from hp_dicts.tt_resnet32_hp import HyperParamsDictRatio3x as hp_dict
         elif ratio == '5':
             from hp_dicts.tt_resnet32_hp import HyperParamsDictRatio5x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'resnet56' in model_name:
+    elif 'tk' == format and 'resnet56' == model_name:
         if ratio == '2':
             from hp_dicts.tk_resnet56_hp import HyperParamsDictRatio2x as hp_dict
         elif ratio == '3':
             from hp_dicts.tk_resnet56_hp import HyperParamsDictRatio3x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'resnet56' in model_name:
+    elif 'tt' == format and 'resnet56' == model_name:
         if ratio == '2':
             from hp_dicts.tt_resnet56_hp import HyperParamsDictRatio2x as hp_dict
         elif ratio == '3':
             from hp_dicts.tt_resnet56_hp import HyperParamsDictRatio3x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'resnet18' in model_name:
+    elif 'tk' == format and 'resnet18' == model_name:
         if ratio == '2':
             from hp_dicts.tk_resnet18_hp import HyperParamsDictRatio2x as hp_dict
         elif ratio == 'sc':
             from hp_dicts.tk_resnet18_hp import HyperParamsDictSC as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'resnet18' in model_name:
+    elif 'tt' == format and 'resnet18' == model_name:
         if ratio == '2' and tt_type == 'general':
             from hp_dicts.tt_resnet18_hp import HyperParamsDictGeneralRatio2x as hp_dict
         elif ratio == '2' and tt_type == 'special':
             from hp_dicts.tt_resnet18_hp import HyperParamsDictSpecialRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'resnet50' in model_name:
+    elif 'tt' == format and 'resnet50' == model_name:
         if ratio == '3' and tt_type == 'general':
             from hp_dicts.tt_resnet50_hp import HyperParamsDictGeneralRatio3x as hp_dict
         elif ratio == '3' and tt_type == 'special':
             from hp_dicts.tt_resnet50_hp import HyperParamsDictSpecialRatio3x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'resnet50' in model_name:
+    elif 'tk' == format and 'resnet50' == model_name:
         if ratio == '3':
             from hp_dicts.tk_resnet50_hp import HyperParamsDictRatio3x as hp_dict
         elif ratio == 'sc':
@@ -340,44 +336,49 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
             from hp_dicts.tk_resnet50_hp import HyperParamsDictRatio10x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'mobilenetv2' in model_name and 'cifar' not in model_name:
+    elif 'tk' == format and 'mobilenetv2' == model_name:
         if ratio == '2':
             from hp_dicts.tk_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tt' in format and 'mobilenetv2' in model_name and 'cifar' not in model_name:
+    elif 'tt' == format and 'mobilenetv2' == model_name:
         if ratio == '2':
             from hp_dicts.tt_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'svd' in format and 'mobilenetv2' in model_name and 'cifar' not in model_name:
+    elif 'svd' == format and 'mobilenetv2' == model_name:
         if ratio == '2':
             from hp_dicts.svd_mobilenetv2_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'mobilenetv2_cifar' in model_name:
+    elif 'tk' == format and 'mobilenetv2_cifar' == model_name:
         if ratio == '2':
             from hp_dicts.tk_mobilenetv2_cifar_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'svd' in format and 'mobilenetv2_cifar' in model_name:
+    elif 'svd' == format and 'mobilenetv2_cifar' == model_name:
         if ratio == '2':
             from hp_dicts.svd_mobilenetv2_cifar_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'densenet40' in model_name:
+    elif 'tk' == format and 'densenet40' == model_name:
         if ratio == '2':
             from hp_dicts.tk_densenet40_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'densenet121' in model_name:
+    elif 'tk' == format and 'densenet121' == model_name:
         if ratio == '2':
             from hp_dicts.tk_densenet121_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
-    elif 'tk' in format and 'vgg16' in model_name:
+    elif 'tk' == format and 'vgg16' == model_name:
         if ratio == '2':
             from hp_dicts.tk_vgg16_hp import HyperParamsDictRatio2x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
+    elif format == 'tk' and model_name == 'vgg16_bn':
+        if ratio == '2':
+            from hp_dicts.tk_vgg16_bn_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
     else:

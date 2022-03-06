@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from typing import Union, List, Dict, Any, cast
 import timm
 import utils
+import re
 
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.models.helpers import build_model_with_cfg
@@ -229,8 +230,22 @@ def tkc_vgg16(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     return model
 
 
+@register_model
+def tkc_vgg16_bn(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _ten_vgg(cfgs['vgg16'], norm_layer=nn.BatchNorm2d,
+                     ten_conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict,  **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == '__main__':
-    baseline = 'vgg16'
+    baseline = 'vgg16_bn'
     model_name = 'tkc_' + baseline
     hp_dict = utils.get_hp_dict(model_name, ratio='2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
