@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Union, List, Dict, Any, cast
+import timm
+import utils
 
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.models.helpers import build_model_with_cfg
@@ -14,10 +16,9 @@ from timm.models.fx_features import register_notrace_module
 from timm.models.layers import ClassifierHead
 from timm.models.registry import register_model
 
-__all__ = [
-    'VGG', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
-    'vgg19_bn', 'vgg19',
-]
+from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
+from TTConv import TTConv2dM, TTConv2dR
+from SVDConv import SVDConv2dC, SVDConv2dM, SVDConv2dR
 
 
 def _cfg(url='', **kwargs):
@@ -42,7 +43,6 @@ default_cfgs = {
     'vgg19_bn': _cfg(url='https://download.pytorch.org/models/vgg19_bn-c79401a0.pth'),
 }
 
-
 cfgs: Dict[str, List[Union[str, int]]] = {
     'vgg11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'vgg13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -52,17 +52,28 @@ cfgs: Dict[str, List[Union[str, int]]] = {
 
 
 @register_notrace_module  # reason: FX can't symbolically trace control flow in forward method
-class ConvMlp(nn.Module):
+class TenConvMlp(nn.Module):
 
     def __init__(self, in_features=512, out_features=4096, kernel_size=7, mlp_ratio=1.0,
-                 drop_rate: float = 0.2, act_layer: nn.Module = None, conv_layer: nn.Module = None):
-        super(ConvMlp, self).__init__()
+                 drop_rate: float = 0.2, act_layer: nn.Module = None, conv_layer: nn.Module = None,
+                 ten_conv=TKConv2dC, hp_dict=None, dense_dict=None):
+        super(TenConvMlp, self).__init__()
         self.input_kernel_size = kernel_size
         mid_features = int(out_features * mlp_ratio)
-        self.fc1 = conv_layer(in_features, mid_features, kernel_size, bias=True)
+        w_name = 'pre_logits.fc1.weight'
+        if w_name in hp_dict.ranks:
+            self.fc1 = ten_conv(in_features, mid_features, kernel_size, bias=True, hp_dict=hp_dict,
+                                name=w_name, dense_w=None if dense_dict is None else dense_dict[w_name])
+        else:
+            self.fc1 = conv_layer(in_features, mid_features, kernel_size, bias=True)
         self.act1 = act_layer(True)
         self.drop = nn.Dropout(drop_rate)
-        self.fc2 = conv_layer(mid_features, out_features, 1, bias=True)
+        w_name = 'pre_logits.fc2.weight'
+        if w_name in hp_dict.ranks:
+            self.fc2 = SVDConv2dC(mid_features, out_features, 1, bias=True, hp_dict=hp_dict,
+                                  name=w_name, dense_w=None if dense_dict is None else dense_dict[w_name])
+        else:
+            self.fc2 = conv_layer(mid_features, out_features, 1, bias=True)
         self.act2 = act_layer(True)
 
     def forward(self, x):
@@ -78,22 +89,25 @@ class ConvMlp(nn.Module):
         return x
 
 
-class VGG(nn.Module):
+class TenVGG(nn.Module):
 
     def __init__(
-        self,
-        cfg: List[Any],
-        num_classes: int = 1000,
-        in_chans: int = 3,
-        output_stride: int = 32,
-        mlp_ratio: float = 1.0,
-        act_layer: nn.Module = nn.ReLU,
-        conv_layer: nn.Module = nn.Conv2d,
-        norm_layer: nn.Module = None,
-        global_pool: str = 'avg',
-        drop_rate: float = 0.,
+            self,
+            cfg: List[Any],
+            num_classes: int = 1000,
+            in_chans: int = 3,
+            output_stride: int = 32,
+            mlp_ratio: float = 1.0,
+            act_layer: nn.Module = nn.ReLU,
+            conv_layer: nn.Module = nn.Conv2d,
+            norm_layer: nn.Module = None,
+            global_pool: str = 'avg',
+            drop_rate: float = 0.,
+            ten_conv=TKConv2dC,
+            hp_dict=None,
+            dense_dict=None
     ) -> None:
-        super(VGG, self).__init__()
+        super(TenVGG, self).__init__()
         assert output_stride == 32
         self.num_classes = num_classes
         self.num_features = 4096
@@ -103,25 +117,35 @@ class VGG(nn.Module):
         net_stride = 1
         pool_layer = nn.MaxPool2d
         layers: List[nn.Module] = []
+        id = 0
         for v in cfg:
             last_idx = len(layers) - 1
             if v == 'M':
                 self.feature_info.append(dict(num_chs=prev_chs, reduction=net_stride, module=f'features.{last_idx}'))
                 layers += [pool_layer(kernel_size=2, stride=2)]
+                id += 1
                 net_stride *= 2
             else:
                 v = cast(int, v)
-                conv2d = conv_layer(prev_chs, v, kernel_size=3, padding=1)
+                w_name = 'features.' + str(id) + '.weight'
+                if w_name in hp_dict.ranks:
+                    conv2d = ten_conv(prev_chs, v, kernel_size=3, padding=1, hp_dict=hp_dict, name=w_name,
+                                      dense_w=None if dense_dict is None else dense_dict[w_name])
+                else:
+                    conv2d = conv_layer(prev_chs, v, kernel_size=3, padding=1)
                 if norm_layer is not None:
                     layers += [conv2d, norm_layer(v), act_layer(inplace=True)]
+                    id += 3
                 else:
                     layers += [conv2d, act_layer(inplace=True)]
+                    id += 2
                 prev_chs = v
         self.features = nn.Sequential(*layers)
         self.feature_info.append(dict(num_chs=prev_chs, reduction=net_stride, module=f'features.{len(layers) - 1}'))
-        self.pre_logits = ConvMlp(
+        self.pre_logits = TenConvMlp(
             prev_chs, self.num_features, 7, mlp_ratio=mlp_ratio,
-            drop_rate=drop_rate, act_layer=act_layer, conv_layer=conv_layer)
+            drop_rate=drop_rate, act_layer=act_layer, conv_layer=conv_layer,
+            ten_conv=ten_conv, hp_dict=hp_dict, dense_dict=dense_dict)
         self.head = ClassifierHead(
             self.num_features, num_classes, pool_type=global_pool, drop_rate=drop_rate)
 
@@ -175,87 +199,47 @@ def _filter_fn(state_dict):
     return out_dict
 
 
-def _create_vgg(variant: str, pretrained: bool, **kwargs: Any) -> VGG:
-    cfg = variant.split('_')[0]
-    # NOTE: VGG is one of few models with stride==1 features w/ 6 out_indices [0..5]
-    out_indices = kwargs.pop('out_indices', (0, 1, 2, 3, 4, 5))
-    model = build_model_with_cfg(
-        VGG, variant, pretrained,
-        default_cfg=default_cfgs[variant],
-        model_cfg=cfgs[cfg],
-        feature_cfg=dict(flatten_sequential=True, out_indices=out_indices),
-        pretrained_filter_fn=_filter_fn,
-        **kwargs)
+def _ten_vgg(cfg: List[Any],
+             num_classes=1000,
+             ten_conv=TKConv2dC,
+             hp_dict=None,
+             dense_dict=None, **kwargs):
+    if 'num_classes' in kwargs.keys():
+        num_classes = kwargs.get('num_classes')
+    model = TenVGG(cfg, num_classes, ten_conv=ten_conv, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if dense_dict is not None:
+        ten_dict = model.state_dict()
+        for key in ten_dict.keys():
+            if key in dense_dict.keys():
+                ten_dict[key] = dense_dict[key]
+        model.load_state_dict(ten_dict)
     return model
 
 
 @register_model
-def vgg11(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 11-layer model (configuration "A") from
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(**kwargs)
-    return _create_vgg('vgg11', pretrained=pretrained, **model_args)
+def tkc_vgg16(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _ten_vgg(cfgs['vgg16'], ten_conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
 
 
-@register_model
-def vgg11_bn(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 11-layer model (configuration "A") with batch normalization
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(norm_layer=nn.BatchNorm2d, **kwargs)
-    return _create_vgg('vgg11_bn', pretrained=pretrained, **model_args)
-
-
-@register_model
-def vgg13(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 13-layer model (configuration "B")
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(**kwargs)
-    return _create_vgg('vgg13', pretrained=pretrained, **model_args)
-
-
-@register_model
-def vgg13_bn(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 13-layer model (configuration "B") with batch normalization
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(norm_layer=nn.BatchNorm2d, **kwargs)
-    return _create_vgg('vgg13_bn', pretrained=pretrained, **model_args)
-
-
-@register_model
-def vgg16(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 16-layer model (configuration "D")
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(**kwargs)
-    return _create_vgg('vgg16', pretrained=pretrained, **model_args)
-
-
-@register_model
-def vgg16_bn(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 16-layer model (configuration "D") with batch normalization
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(norm_layer=nn.BatchNorm2d, **kwargs)
-    return _create_vgg('vgg16_bn', pretrained=pretrained, **model_args)
-
-
-@register_model
-def vgg19(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 19-layer model (configuration "E")
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(**kwargs)
-    return _create_vgg('vgg19', pretrained=pretrained, **model_args)
-
-
-@register_model
-def vgg19_bn(pretrained: bool = False, **kwargs: Any) -> VGG:
-    r"""VGG 19-layer model (configuration 'E') with batch normalization
-    `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`._
-    """
-    model_args = dict(norm_layer=nn.BatchNorm2d, **kwargs)
-    return _create_vgg('vgg19_bn', pretrained=pretrained, **model_args)
+if __name__ == '__main__':
+    baseline = 'vgg16'
+    model_name = 'tkc_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, ratio='2')
+    model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
+    # model = timm.create_model(baseline)
+    x = torch.randn([1, 3, 224, 224])
+    y = model(x)
+    n_params = 0
+    for name, p in model.named_parameters():
+        if p.requires_grad:
+            print('\'{}\': {},'.format(name, list(p.shape)))
+        n_params += p.numel()
+    print('Total # parameters: {}'.format(n_params))
