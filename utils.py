@@ -255,7 +255,7 @@ def normal_adjust_lr(optimizer, init_lr, epoch, epochs, base=0.2):
     return lr
 
 
-def get_hp_dict(model_name, ratio, format='tk', tt_type='general'):
+def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
     match = re.match(r'(tk|tt|svd)?[crm]?_?(.+)', model_name)
     if match.group(1):
         format, model_name = match.group(1), match.group(2)

@@ -24,6 +24,7 @@ import mobilenetv2_cifar_tt
 import densenet_cifar
 import densenet_cifar_tt
 import densenet_inet_tt
+import vgg_tt
 
 
 def main(args):

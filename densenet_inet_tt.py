@@ -319,12 +319,15 @@ def _ten_densenet(growth_rate=32, block_config=(6, 12, 24, 16), num_classes=1000
 @register_model
 def tkc_densenet121(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
-        dense_dict = torch.load(path, map_location='cpu')
+        if pretrained:
+            dense_dict = timm.create_model('resnet121', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
     else:
         dense_dict = None
     model = _ten_densenet(growth_rate=32, block_config=(6, 12, 24, 16),
                           conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
-    if pretrained:
+    if pretrained and not decompose:
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
