@@ -253,7 +253,7 @@ def tkc_vgg16_bn(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 if __name__ == '__main__':
     baseline = 'vgg16_bn'
     model_name = 'tkc_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, ratio='2')
+    hp_dict = utils.get_hp_dict(model_name, ratio='10')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=True, pretrained=True)
     # model = timm.create_model(baseline)
     x = torch.randn([1, 3, 224, 224])

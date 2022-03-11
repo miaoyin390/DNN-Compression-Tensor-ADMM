@@ -38,3 +38,22 @@ class HyperParamsDictRatio2x:
         'pre_logits.fc1.weight': [256, 288],
         # 'pre_logits.fc2.weight': [512],
     }
+
+
+class HyperParamsDictRatio10x:
+    ranks = {
+        'features.2.weight':  [32, 32],
+        'features.5.weight':  [32, 32],
+        'features.7.weight':  [32, 32],
+        'features.10.weight': [32, 64],
+        'features.12.weight': [32, 64],
+        'features.14.weight': [64, 64],
+        'features.17.weight': [64, 64],
+        'features.19.weight': [64, 96],
+        'features.21.weight': [64, 96],
+        'features.24.weight': [64, 96],
+        'features.26.weight': [64, 96],
+        'features.28.weight': [64, 96],
+        'pre_logits.fc1.weight': [96, 96],
+        # 'pre_logits.fc2.weight': [512],
+    }
