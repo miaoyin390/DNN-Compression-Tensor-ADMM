@@ -1,7 +1,7 @@
 ### 🚫 Please keep confidential!
 ### 🚫 DO NOT share without Professor's permission!
 
-#### > Example command:
+#### > Example commands:
 
 Train baseline: `python main.py --model resnet32 --dataset cifar10 --lr 0.1 --sched step --decay-epochs 55 --epochs 200 --gpus 2 --mixup 0 --cutmix 0 --smoothing 0.1 --batch-size 128 --decay-rate 0.2`
 
