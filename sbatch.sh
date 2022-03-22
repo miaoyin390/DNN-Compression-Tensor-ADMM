@@ -39,6 +39,9 @@ conda activate miaoyin
 module load cuda/11.1.1
 module load cudnn
 
+## command for temporarily apply for GPUs
+## interact -p GPU-shared --gres=gpu:v100-32:2 -t 58:00
+
 #python -m torch.distributed.launch --nproc_per_node 4 main.py --model resnet18 --ratio sc --admm --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 6 --smoothing 0.1 --distributed --save-log --save-model --distillation-type hard --teacher-model resnet34
 #python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet18 --decompose --model-path ./saved_models/resnet18_imagenet_admm_tk_0222-022350_model.pt --ratio 2 --format tk --sched step --decay-epochs 40 --decay-rate 0.2 --lr 0.001 --epochs 150 --save-log --save-model --fp16 --num-workers 6 --distributed
 #python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet18 --decompose --model-path ./saved_models/resnet18_imagenet_admm_tk_0225-161144_model.pt --ratio sc --format tk --sched step --decay-epochs 45 --decay-rate 0.2 --lr 0.001 --epochs 160 --save-log --save-model --fp16 --num-workers 6 --distributed
