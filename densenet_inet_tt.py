@@ -335,6 +335,11 @@ def tkc_densenet121(hp_dict, decompose=False, pretrained=False, path=None, **kwa
 
 if __name__ == '__main__':
     baseline = 'densenet121'
+    baseline_model = timm.create_model(baseline)
+    base_n_params = 0
+    for name, p in baseline_model.named_parameters():
+        if p.requires_grad:
+            base_n_params += p.numel()
     model_name = 'tkc_' + baseline
     hp_dict = utils.get_hp_dict(model_name, ratio='2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
@@ -346,4 +351,5 @@ if __name__ == '__main__':
             print('\'{}\': {},'.format(name, list(p.shape)))
         n_params += p.numel()
     print('Total # parameters: {}'.format(n_params))
+    print('Compression ratio: {:.2f}'.format(base_n_params/n_params))
 
