@@ -38,6 +38,6 @@ class HyperParamsDictRatio10x:
         'features.34.weight': [96, 192],
         'features.37.weight': [96, 192],
         'features.40.weight': [96, 192],
-        'pre_logits.fc1.weight': [256, 256],
+        'pre_logits.fc1.weight': [288, 288],
         'pre_logits.fc2.weight': [512],
     }
