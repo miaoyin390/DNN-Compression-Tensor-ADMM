@@ -9,7 +9,7 @@ ADMM from local model: `python main.py --model resnet32 --dataset cifar10 --lr 0
 
 ADMM from online model: `python main.py --model resnet32 --dataset cifar10 --lr 0.1 --sched cosine --admm --format tk --pretrained --epochs 200 --gpus 2 --smoothing 0.1 --batch-size 128`
 
-Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset cifar10 --lr 0.005 --sched cosine --admm --model-path [admm_model_path] --epochs 200 --gpus 2 --smoothing 0.1 --batch-size 128`
+Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset cifar10 --lr 0.005 --sched cosine --decompose --model-path [admm_model_path] --epochs 200 --gpus 2 --smoothing 0.1 --batch-size 128`
 
 #### > Experimental results:
 (P and F in Ratio column means parameters and FLOPs, respectively.)
