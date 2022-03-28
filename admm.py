@@ -45,10 +45,10 @@ class ADMM:
                 z = param.data + self.u[name]
                 # if 'conv' in name:
                 if len(param.shape) == 4:
-                    if self.format == 'tk':
+                    if self.format == 'tk' and len(self.hp_dict.ranks[name]) > 1:
                         self.z[name].data = torch.from_numpy(
                             self.prune_conv_rank_tk(z.detach().cpu().numpy(), name)).to(self.device)
-                    elif self.format == 'tt':
+                    elif self.format == 'tt' and len(self.hp_dict.ranks[name]) > 1:
                         self.z[name] = torch.from_numpy(
                             self.prune_conv_rank_tt(z.detach().cpu().numpy(), name)).to(self.device)
                     else:
@@ -127,7 +127,7 @@ class ADMM:
         return updated_z
 
     def prune_conv_rank_svd(self, z, name):
-        rank = self.hp_dict.ranks[name]
+        rank = self.hp_dict.ranks[name] if isinstance(self.hp_dict.ranks[name], int) else self.hp_dict.ranks[name][0]
         u, s, v = np.linalg.svd(z.detach().squeeze().cpu().numpy(), full_matrices=False)
         u = u[:, :rank]
         s = s[:rank]
@@ -139,7 +139,7 @@ class ADMM:
         return updated_z
 
     def prune_linear_rank_svd(self, z, name):
-        rank = self.hp_dict.ranks[name]
+        rank = self.hp_dict.ranks[name] if isinstance(self.hp_dict.ranks[name], int) else self.hp_dict.ranks[name][0]
         u, s, v = np.linalg.svd(z.detach().cpu().numpy(), full_matrices=False)
         u = u[:, :rank]
         s = s[:rank]
