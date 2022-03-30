@@ -368,7 +368,7 @@ def tkc_densenet201(hp_dict, decompose=False, pretrained=False, path=None, **kwa
 
 
 if __name__ == '__main__':
-    baseline = 'densenet264'
+    baseline = 'densenet201'
     baseline_model = timm.create_model(baseline)
     base_n_params = 0
     for name, p in baseline_model.named_parameters():
