@@ -333,12 +333,48 @@ def tkc_densenet121(hp_dict, decompose=False, pretrained=False, path=None, **kwa
     return model
 
 
+@register_model
+def tkc_densenet264(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict = timm.create_model('resnet264', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _ten_densenet(growth_rate=48, block_config=(6, 12, 64, 48),
+                          conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
+@register_model
+def tkc_densenet201(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict = timm.create_model('resnet201', pretrained=True).state_dict()
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _ten_densenet(growth_rate=32, block_config=(6, 12, 48, 32),
+                          conv=TKConv2dC, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+    return model
+
+
 if __name__ == '__main__':
-    baseline = 'densenet121'
+    baseline = 'densenet264'
     baseline_model = timm.create_model(baseline)
     base_n_params = 0
     for name, p in baseline_model.named_parameters():
         if p.requires_grad:
+            if 'conv' in name:
+                print('\'{}\': {},'.format(name, list(p.shape)))
             base_n_params += p.numel()
     model_name = 'tkc_' + baseline
     hp_dict = utils.get_hp_dict(model_name, ratio='2')
