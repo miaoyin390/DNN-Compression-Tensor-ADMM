@@ -371,6 +371,11 @@ def get_hp_dict(model_name, ratio, format='none', tt_type='general'):
             from hp_dicts.tk_densenet121_hp import HyperParamsDictRatio2x as hp_dict
         else:
             raise Exception('ERROR: Unsupported compression ratio!')
+    elif 'tk' == format and 'densenet201' == model_name:
+        if ratio == '2':
+            from hp_dicts.tk_densenet201_hp import HyperParamsDictRatio2x as hp_dict
+        else:
+            raise Exception('ERROR: Unsupported compression ratio!')
     elif 'tk' == format and 'vgg16' == model_name:
         if ratio == '2':
             from hp_dicts.tk_vgg16_hp import HyperParamsDictRatio2x as hp_dict
