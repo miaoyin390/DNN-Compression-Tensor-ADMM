@@ -142,6 +142,7 @@ def resnet32(pretrained=False, path=None, **kwargs):
         model.load_state_dict(state_dict)
     return model
 
+
 @register_model
 def resnet56(pretrained=False, path=None, **kwargs):
     model = _resnet([9, 9, 9], **kwargs)
@@ -149,6 +150,7 @@ def resnet56(pretrained=False, path=None, **kwargs):
         state_dict = torch.load(path, map_location='cpu')
         model.load_state_dict(state_dict)
     return model
+
 
 @register_model
 def resnet20(pretrained=False, path=None, **kwargs):
@@ -160,7 +162,7 @@ def resnet20(pretrained=False, path=None, **kwargs):
 
 
 if __name__ == '__main__':
-    model = timm.create_model('resnet56')
+    model = timm.create_model('resnet32')
     n_params = 0
     for name, p in model.named_parameters():
         if p.requires_grad:
