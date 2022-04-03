@@ -16,7 +16,7 @@ Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset 
 
 | Model                  | Top-1 (%) | Top-5 (%) | Ratio |                                                     Configuration                                                     |
 |------------------------|:---------:|--|:-----:|:---------------------------------------------------------------------------------------------------------------------:|
-| ResNet32-Baseline      |   92.49   | N/A |  N/A  |                                                          N/A                                                          |
+| ResNet32-Baseline      |   92.49   | N/A |  N/A  |                   weight-decay=5e-4                                                         |
 | ResNet32-TK-ADMM       |   93.44   | N/A |  3x   |        lr=0.1, epochs=200, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=55, smoothing=0.1         |
 | ResNet32-TK-FT         |   93.29   | N/A |  3x   |       lr=0.005, epochs=200, optimizer=momentum, scheduler=step, decay_rate=0.4, decay_epochs=55, smoothing=0.1        |
 | ResNet32-TT-ADMM       |   93.07   | N/A |  3x   |        lr=0.1, epochs=200, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=55, smoothing=0.1         |
