@@ -11,21 +11,40 @@ import torch.nn.functional as F
 
 torch.manual_seed(20211012)
 
-batch_size = 64
-in_features = 192
-out_features = 768
+in_tt_shapes = [8, 20, 20, 18]
+out_tt_shapes = [4, 4, 4, 4]
+tt_ranks = [1, 4, 4, 4, 1]
 
-params = in_features * out_features
-flops = batch_size * in_features * out_features
+out_tt_shapes[0] *= 4
+
+base_params = np.prod(in_tt_shapes) * np.prod(out_tt_shapes)
+base_flops = base_params
+
+tt_params = 0
+tt_flops = 0
+for k in range(len(in_tt_shapes)):
+    tt_flops += np.prod(in_tt_shapes[k:]) * np.prod(out_tt_shapes[:k+1]) * tt_ranks[k] * tt_ranks[k+1]
+    tt_params += in_tt_shapes[k] * out_tt_shapes[k] * tt_ranks[k] * tt_ranks[k+1]
+
+print('compression ratio: {}'.format(base_params/tt_params))
+print('FLOPs reduction: {}'.format(base_flops/tt_flops))
+
+batch_size = 1
+
 tt_params = 0
 tt_flops = 0
 
-in_tt_shapes = [12, 16]
+in_tt_shapes = [8, 20, 20, 18]
 in_tt_order = len(in_tt_shapes)
-out_tt_shapes = [32, 24]
+out_tt_shapes = [4, 8, 8]
+out_tt_shapes[0] *= 4
 out_tt_order = len(out_tt_shapes)
 tt_shapes = out_tt_shapes + in_tt_shapes
-tt_ranks = [1, 30, 70, 16, 1]
+tt_ranks = [1, 4, 5, 9, 12, 6, 3, 1]
+in_features = int(np.prod(in_tt_shapes))
+out_features = int(np.prod(out_tt_shapes))
+params = in_features * out_features
+flops = batch_size * in_features * out_features
 
 tt_cores = [torch.randn(tt_ranks[i], tt_shapes[i], tt_ranks[i+1]) for i in range(len(tt_shapes))]
 for i in range(len(tt_cores)):
