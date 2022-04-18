@@ -219,7 +219,7 @@ def train(model, args):
                 args.resume, map_location='cpu', check_hash=True)
         else:
             checkpoint = torch.load(args.resume, map_location='cpu')
-        model_path = args.resume.split('_')[0] + '_model.pt'
+        model_path = args.resume.replace('checkpoint.pth', 'model.pt')
         # model_without_ddp.load_state_dict(checkpoint['model'])
         model_without_ddp.load_state_dict(torch.load(model_path, map_location='cpu'))
         if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
