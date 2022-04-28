@@ -429,7 +429,7 @@ class TTResNet(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc(x)
 
-        return x, compr_flops, base_flops
+        return x, base_flops, compr_flops
 
 
 def _tt_resnet(
@@ -645,7 +645,7 @@ if __name__ == '__main__':
     x = torch.randn(1, 3, 224, 224)
     _ = model(x)
     print(compr_params)
-    _, compr_flops, base_flops = model.forward_flops(x)
+    _, base_flops, compr_flops = model.forward_flops(x)
     base_params = 0
     model = timm.create_model(baseline)
     for name, p in model.named_parameters():

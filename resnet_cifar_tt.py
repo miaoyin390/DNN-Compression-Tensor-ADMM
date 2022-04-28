@@ -128,7 +128,7 @@ class TTBasicBlock(nn.Module):
         out += self.shortcut(x)
         out = F.relu(out)
 
-        return out, compr_flops, base_flops
+        return out, base_flops, compr_flops
 
 
 class TTResNet(nn.Module):
