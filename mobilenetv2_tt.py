@@ -276,8 +276,29 @@ def svdc_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kw
     return model
 
 
+@register_model
+def svdm_mobilenetv2(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
+    if decompose:
+        if pretrained:
+            dense_dict_ = timm.create_model('mobilenetv2_100', pretrained=True).state_dict()
+            dense_dict = mobilenetv2().state_dict()
+            for k1, k2 in zip(dense_dict.keys(), dense_dict_.keys()):
+                print(k1, k2)
+                dense_dict[k1].data = dense_dict_[k2]
+        else:
+            dense_dict = torch.load(path, map_location='cpu')
+    else:
+        dense_dict = None
+    model = _tt_mobilenetv2(conv=SVDConv2dM, hp_dict=hp_dict, dense_dict=dense_dict, **kwargs)
+    if pretrained and not decompose:
+        state_dict = torch.load(path, map_location='cpu')
+        model.load_state_dict(state_dict)
+
+    return model
+
+
 if __name__ == '__main__':
-    model_name = 'svdc_mobilenetv2'
+    model_name = 'svdm_mobilenetv2'
     hp_dict = utils.get_hp_dict(model_name, ratio='2')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=None)
     n_params = 0
@@ -287,3 +308,5 @@ if __name__ == '__main__':
             print(name, p.shape)
             n_params += int(np.prod(p.shape))
     print('Total # parameters: {}'.format(n_params))
+    x = torch.randn(1, 3, 224, 224)
+    _ = model(x)

@@ -268,8 +268,8 @@ class SVDConv2dM(Module):
         else:
             self.register_parameter('bias', None)
 
-        self.left_factor = Parameter(torch.Tensor(self.rank, self.in_channels, 1, 1))
-        self.right_factor = Parameter(torch.Tensor(self.out_channels, self.rank, 1, 1))
+        self.left_factor = Parameter(torch.Tensor(self.rank, self.in_channels))
+        self.right_factor = Parameter(torch.Tensor(self.out_channels, self.rank))
 
         if bias:
             self.bias = Parameter(torch.zeros(out_channels))

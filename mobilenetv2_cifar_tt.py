@@ -243,7 +243,7 @@ def svdm_mobilenetv2_cifar(hp_dict, decompose=False, pretrained=False, path=None
 
 if __name__ == "__main__":
     baseline = 'mobilenetv2_cifar'
-    model_name = 'svdr_' + baseline
+    model_name = 'svdm_' + baseline
     hp_dict = utils.get_hp_dict(model_name, ratio='2')
     model = timm.create_model(model_name, num_classes=10, hp_dict=hp_dict, decompose=True,
                               path='./saved_models/mobilenetv2_cifar_cifar10_0128-224831_model.pt')
