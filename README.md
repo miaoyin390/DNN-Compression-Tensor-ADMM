@@ -36,7 +36,7 @@ Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset 
 | DeiT-tiny-baseline    |   72.20   |  |       |                                                                                                                       |
 | DeiT-tiny-TT-ADMM      |   71.68   | 90.28 | 30\%  |                    lr=0.01, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard'                     |
 | DeiT-tiny-TT-FT        |   72.61   | 90.86 | 30\%  |                    lr=0.001, epochs=100, optimizer=momentum, scheduler=cosine, distillation='hard'                    |
-| DeitT-small-baseline   |   79.90   |  |       |                                                                                                                       |
+| DeiT-small-baseline   |   79.90   |  |       |                                                                                                                       |
 | DeiT-small-TT-ADMM     |   78.81   | 94.30 | 35\%  | lr=0.01, epochs=400, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1  |
 | DeiT-small-TT-FT       |   79.07   | 94.53 | 35\%  | lr=0.002, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1 |
 | Mobilenetv2-baseline   |  71.80  |        |       |                                                                                                                         |
