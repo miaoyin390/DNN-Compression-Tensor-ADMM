@@ -33,12 +33,12 @@ Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset 
 | ResNet50-TT-general-ADMM |   76.98   | 93.34 | 3.05x |               lr=0.01, epochs=150, optimizer=momentum, scheduler=step, decay_rate=0.1, decay_epochs=40                |
 | ResNet50-TT-general-FT |   76.44   | 93.18 | 3.05x |               lr=0.001, epochs=105, optimizer=momentum, scheduler=step, decay_rate=0.2, decay_epochs=30               |
 | ResNet50-TK |   76.44   | 92.94 | P3x, F2.7x |               --lr 0.008 --epochs=180 --opt momentum --scheduler cosine --pretrained --decompose --distillation 'hard' --teacher-model resnet50                |
-| DeitT-tiny-baseline    |   72.20   |  |       |                                                                                                                       |
+| DeiT-tiny-baseline    |   72.20   |  |       |                                                                                                                       |
 | DeiT-tiny-TT-ADMM      |   71.68   | 90.28 | 30\%  |                    lr=0.01, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard'                     |
 | DeiT-tiny-TT-FT        |   72.61   | 90.86 | 30\%  |                    lr=0.001, epochs=100, optimizer=momentum, scheduler=cosine, distillation='hard'                    |
 | DeitT-small-baseline   |   79.90   |  |       |                                                                                                                       |
-| Deit-small-TT-ADMM     |   78.81   | 94.30 | 35\%  | lr=0.01, epochs=400, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1  |
-| Deit-small-TT-FT       |   79.07   | 94.53 | 35\%  | lr=0.002, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1 |
+| DeiT-small-TT-ADMM     |   78.81   | 94.30 | 35\%  | lr=0.01, epochs=400, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1  |
+| DeiT-small-TT-FT       |   79.07   | 94.53 | 35\%  | lr=0.002, epochs=200, optimizer=momentum, scheduler=cosine, distillation='hard', mixup=0.3, cutmix=1.0, smoothing=0.1 |
 | Mobilenetv2-baseline   |  71.80  |        |       |                                                                                                                         |
 | Mobilenetv2-SVD-ADMM   |   70.03   | 89.17 |       |             lr=0.05, epochs=180, optimizer=momentum, scheduler=cosine, distillation='hard', smoothing=0.1             |
 | Mobilenetv2-SVD-FT     | 69.94 | 89.16 | 30\%  |            lr=0.005, epochs=180, optimizer=momentum, scheduler=cosine, distillation='hard', smoothing=0.1                 |
