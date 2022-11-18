@@ -320,7 +320,7 @@ def _ten_densenet(growth_rate=32, block_config=(6, 12, 24, 16), num_classes=1000
 def tkc_densenet121(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         if pretrained:
-            dense_dict = timm.create_model('resnet121', pretrained=True).state_dict()
+            dense_dict = timm.create_model('densenet121', pretrained=True).state_dict()
         else:
             dense_dict = torch.load(path, map_location='cpu')
     else:
@@ -337,7 +337,7 @@ def tkc_densenet121(hp_dict, decompose=False, pretrained=False, path=None, **kwa
 def tkc_densenet264(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         if pretrained:
-            dense_dict = timm.create_model('resnet264', pretrained=True).state_dict()
+            dense_dict = timm.create_model('densenet264', pretrained=True).state_dict()
         else:
             dense_dict = torch.load(path, map_location='cpu')
     else:
@@ -354,7 +354,7 @@ def tkc_densenet264(hp_dict, decompose=False, pretrained=False, path=None, **kwa
 def tkc_densenet201(hp_dict, decompose=False, pretrained=False, path=None, **kwargs):
     if decompose:
         if pretrained:
-            dense_dict = timm.create_model('resnet201', pretrained=True).state_dict()
+            dense_dict = timm.create_model('densenet201', pretrained=True).state_dict()
         else:
             dense_dict = torch.load(path, map_location='cpu')
     else:
