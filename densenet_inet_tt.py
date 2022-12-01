@@ -383,9 +383,11 @@ if __name__ == '__main__':
     y = model(x)
     n_params = 0
     for name, p in model.named_parameters():
-        if p.requires_grad and 'conv' in name:
-            print('\'{}\': {},'.format(name, list(p.shape)))
+        # if p.requires_grad and 'conv' in name:
+        #     print('\'{}\': {},'.format(name, list(p.shape)))
         n_params += p.numel()
     print('Total # parameters: {}'.format(n_params))
     print('Compression ratio: {:.2f}'.format(base_n_params/n_params))
+
+
 
