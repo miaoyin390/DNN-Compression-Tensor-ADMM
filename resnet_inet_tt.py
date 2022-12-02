@@ -633,7 +633,7 @@ def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 if __name__ == '__main__':
     baseline = 'resnet18'
     model_name = 'tkc_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, ratio='sc', tt_type='general')
+    hp_dict = utils.get_hp_dict(model_name, ratio='4', tt_type='general')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=True, pretrained=True)
     compr_params = 0
     for name, p in model.named_parameters():

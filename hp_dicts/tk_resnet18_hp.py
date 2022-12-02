@@ -44,3 +44,43 @@ class HyperParamsDictSC:
         'layer4.1.conv1.weight': [160, 192],
         'layer4.1.conv2.weight': [160, 192],
     }
+
+class HyperParamsDict3x:
+    ranks = {
+        'layer1.0.conv1.weight': [32, 32],
+        'layer1.0.conv2.weight': [32, 32],
+        'layer1.1.conv1.weight': [32, 32],
+        'layer1.1.conv2.weight': [32, 32],
+        'layer2.0.conv1.weight': [64, 64],
+        'layer2.0.conv2.weight': [64, 64],
+        'layer2.1.conv1.weight': [64, 64],
+        'layer2.1.conv2.weight': [64, 64],
+        'layer3.0.conv1.weight': [96, 96],
+        'layer3.0.conv2.weight': [96, 96],
+        'layer3.1.conv1.weight': [96, 96],
+        'layer3.1.conv2.weight': [96, 96],
+        'layer4.0.conv1.weight': [128, 160],
+        'layer4.0.conv2.weight': [128, 160],
+        'layer4.1.conv1.weight': [128, 160],
+        'layer4.1.conv2.weight': [128, 160],
+    }
+
+class HyperParamsDict4x:
+    ranks = {
+        'layer1.0.conv1.weight': [32, 32],
+        'layer1.0.conv2.weight': [32, 32],
+        'layer1.1.conv1.weight': [32, 32],
+        'layer1.1.conv2.weight': [32, 32],
+        'layer2.0.conv1.weight': [32, 64],
+        'layer2.0.conv2.weight': [32, 64],
+        'layer2.1.conv1.weight': [32, 64],
+        'layer2.1.conv2.weight': [32, 64],
+        'layer3.0.conv1.weight': [64, 96],
+        'layer3.0.conv2.weight': [64, 96],
+        'layer3.1.conv1.weight': [64, 96],
+        'layer3.1.conv2.weight': [64, 96],
+        'layer4.0.conv1.weight': [128, 128],
+        'layer4.0.conv2.weight': [128, 128],
+        'layer4.1.conv1.weight': [128, 128],
+        'layer4.1.conv2.weight': [128, 128],
+    }
