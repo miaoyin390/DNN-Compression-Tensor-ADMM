@@ -14,4 +14,6 @@
 
 #CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node 4 main.py --model resnet50 --ratio 3 --admm --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet50 --ratio 3 --decompose --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
+#CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet50 --ratio 3 --decompose --epochs 180 --format tk --pretrained --lr 0.01 --sched step --decay-epochs 55 --fp16 --num-workers 8 --distributed
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node 4 main.py --model tkc_resnet18 --ratio 3 --epochs 100 --model-path resnet18_imagenet_admm_tk_0222-022350_model.pt --decompose --lr 0.001 --sched step --decay-epochs 45  --fp16 --num-workers 8 --distributed --save-model --save-log
