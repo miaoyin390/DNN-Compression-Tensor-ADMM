@@ -34,7 +34,7 @@ cd $destDir
 tar -xf train.tar
 tar -xf val.tar
 cd $workDir
-source $PROJECT/anaconda3/etc/profile.d/conda.sh
+##source $PROJECT/anaconda3/etc/profile.d/conda.sh
 ##conda activate miaoyin
 module load cuda/11.1.1
 module load cudnn

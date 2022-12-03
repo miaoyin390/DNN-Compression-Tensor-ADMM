@@ -159,7 +159,7 @@ def parse_args():
                         help='Initialize the model from a pretrained model')
     parser.add_argument('--decompose', action='store_true', default=None,
                         help='Initialize the model via decomposing an uncompressed one')
-    parser.add_argument('--ratio', default='2', choices=['1.5', '2', '3', '5', '10', 'sc'], type=str, help="")
+    parser.add_argument('--ratio', default='2', choices=['1.5', '2', '3', '4', '5', '10', 'sc'], type=str, help="")
     parser.add_argument('--tt-type', default='general', choices=['general', 'special'], type=str, help="")
     parser.add_argument('--format', default='tk', choices=['none', 'tk', 'tt', 'svd'], type=str, help="")
     parser.add_argument('--verbose', action='store_true', default=False)
