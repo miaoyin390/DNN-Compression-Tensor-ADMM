@@ -18,7 +18,8 @@ import utils
 
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.models.helpers import build_model_with_cfg
-from timm.models.layers import BatchNormAct2d, create_norm_act, BlurPool2d, create_classifier
+from timm.models.layers import BatchNormAct2d, BlurPool2d, create_classifier
+from timm.layers import create_norm_act
 from timm.models.registry import register_model
 from TKConv import TKConv2dC, TKConv2dM, TKConv2dR
 from TTConv import TTConv2dM, TTConv2dR
