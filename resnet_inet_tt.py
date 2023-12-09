@@ -632,8 +632,8 @@ def tkc_resnet50(hp_dict, decompose=False, pretrained=False, path=None, **kwargs
 
 if __name__ == '__main__':
     baseline = 'resnet18'
-    model_name = 'tkc_' + baseline
-    hp_dict = utils.get_hp_dict(model_name, ratio='5', tt_type='general')
+    model_name = 'ttm_' + baseline
+    hp_dict = utils.get_hp_dict(model_name, ratio='2', tt_type='general')
     model = timm.create_model(model_name, hp_dict=hp_dict, decompose=True, pretrained=True)
     compr_params = 0
     for name, p in model.named_parameters():
@@ -659,3 +659,18 @@ if __name__ == '__main__':
     print('Baseline # FLOPs: {:.2f}M'.format(base_flops))
     print('Compressed # FLOPs: {:.2f}M'.format(compr_flops))
     print('FLOPs ratio: {:.3f}'.format(base_flops / compr_flops))
+
+    dummy_input = torch.randn(1, 3, 224, 224, requires_grad=True)
+
+    import pdb
+    pdb.set_trace()
+    # Export the model
+    torch.onnx.export(model,         # model being run
+                      dummy_input,       # model input (or a tuple for multiple inputs)
+                      model_name + ".onnx",       # where to save the model
+                      export_params=True,  # store the trained parameter weights inside the model file
+                      opset_version=17,    # the ONNX version to export the model to
+                      do_constant_folding=True,  # whether to execute constant folding for optimization
+                      input_names = ['modelInput'],   # the model's input names
+                      output_names = ['modelOutput'], # the model's output names
+                      )
