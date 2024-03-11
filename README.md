@@ -1,7 +1,7 @@
-### 🚫 Please keep confidential!
-### 🚫 DO NOT share without Professor's permission!
+This is the official implementation for [Towards Efficient Tensor Decomposition-Based DNN Model Compression with Optimization Framework (CVPR 2021)](https://openaccess.thecvf.com/content/CVPR2021/papers/Yin_Towards_Efficient_Tensor_Decomposition-Based_DNN_Model_Compression_With_Optimization_Framework_CVPR_2021_paper.pdf)
 
-#### > Example commands:
+
+### > Example commands:
 
 Train baseline: `python main.py --model resnet32 --dataset cifar10 --lr 0.1 --sched step --decay-epochs 55 --epochs 200 --gpus 2 --mixup 0 --cutmix 0 --smoothing 0.1 --batch-size 128 --decay-rate 0.2`
 
@@ -11,7 +11,7 @@ ADMM from online model: `python main.py --model resnet32 --dataset cifar10 --lr 
 
 Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset cifar10 --lr 0.005 --sched cosine --decompose --model-path [admm_model_path] --epochs 200 --gpus 2 --smoothing 0.1 --batch-size 128`
 
-#### > Experimental results:
+### > Experimental results:
 (P and F in Ratio column means parameters and FLOPs, respectively.)
 
 | Model                  | Top-1 (%) | Top-5 (%) | Ratio |                                                     Configuration                                                     |
@@ -42,3 +42,14 @@ Fine-tune from local ADMM model: `python main.py --model tkc_resnet32 --dataset 
 | Mobilenetv2-baseline   |  71.80  |        |       |                                                                                                                         |
 | Mobilenetv2-SVD-ADMM   |   70.03   | 89.17 |       |             lr=0.05, epochs=180, optimizer=momentum, scheduler=cosine, distillation='hard', smoothing=0.1             |
 | Mobilenetv2-SVD-FT     | 69.94 | 89.16 | 30\%  |            lr=0.005, epochs=180, optimizer=momentum, scheduler=cosine, distillation='hard', smoothing=0.1                 |
+
+#### > Cite
+```
+@inproceedings{yin2021towards,
+  title={Towards efficient tensor decomposition-based dnn model compression with optimization framework},
+  author={Yin, Miao and Sui, Yang and Liao, Siyu and Yuan, Bo},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={10674--10683},
+  year={2021}
+}
+```
